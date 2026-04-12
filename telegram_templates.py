@@ -390,7 +390,7 @@ def msg_startup(
     us_early_end=3, dead_zone_start=4, dead_zone_end=7,
     tokyo_start=8, tokyo_end=15, london_start=16, london_end=20,
     us_start=21, us_end=23, max_total_open=2,
-    position_full_usd=30, position_partial_usd=20, session_thresholds=None,
+    position_full_usd=48, position_partial_usd=30, session_thresholds=None,
     tg_min_score=3, h1_filter_enabled=True, h1_filter_mode="soft",
 ) -> str:
     thr     = session_thresholds or {}
@@ -412,8 +412,9 @@ def msg_startup(
         f"  ✈️  {dead_zone_start:02d}:00–{dead_zone_end:02d}:59  Dead zone\n"
         f"  🗼 {tokyo_start:02d}:00–{tokyo_end:02d}:59  Tokyo      cap {max_trades_tokyo}  score≥{tok_thr}\n"
         f"  🇬🇧 {london_start:02d}:00–{london_end:02d}:59  London     cap {max_trades_london}  score≥{lon_thr}\n"
-        f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US         cap {max_trades_us}  score≥{us_thr}\n"
-        f"  🗽 00:00–{us_early_end:02d}:59  US cont.   cap {max_trades_us}  score≥{us_thr}\n"
+        + (f"  🚫 US session   disabled\n" if us_start >= 99 else
+           f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US         cap {max_trades_us}  score≥{us_thr}\n")
+        + f"  🗽 00:00–{us_early_end:02d}:59  US cont.   cap {max_trades_us}  score≥{us_thr}\n"
         f"{_DIV}\n"
         f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss cap: {max_losing_day}/day\n"
         f"Global cap: {max_total_open} open trades"

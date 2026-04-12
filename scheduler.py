@@ -294,6 +294,9 @@ def main():
                 tg_min_score=int(settings.get('telegram_min_score_alert', 3)),
                 h1_filter_enabled=bool(settings.get('h1_filter_enabled', True)),
                 h1_filter_mode=settings.get('h1_filter_mode', 'soft'),
+                position_full_usd=int(settings.get('position_full_usd', 48)),
+                position_partial_usd=int(settings.get('position_partial_usd', 30)),
+                session_thresholds=settings.get('session_thresholds', {}),
             ))
             _state["last_startup_ts"] = _now_ts
             save_json(RUNTIME_STATE_FILE, _state)
