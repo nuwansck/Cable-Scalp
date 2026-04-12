@@ -62,3 +62,30 @@ Flip to `"h1_filter_mode": "strict"` to block counter-trend entries once data co
 ### Breakeven
 Disabled (`breakeven_enabled: false`). Enable by setting to `true` once
 `max_pips_reached` data confirms winners consistently travel past 20p.
+
+---
+
+## v1.1.0 — 2026-04-12
+
+### US session re-enabled
+US session (21:00–23:59 SGT) re-enabled for data collection.
+Previous disable was based on 5 trades — insufficient sample for a structural decision.
+Score threshold: ≥ 4/6 (same as London and US continuation).
+Requires 30–50 trades per window before any session-level conclusions.
+
+### Enhanced per-session Telegram reporting
+- **Daily summary:** Session breakdown now shows `W/L split + win rate + net PnL`
+  per session (was trade count + PnL + icon only).
+- **Weekly report:** "By Session" rows now include explicit `W/L counts` alongside
+  the win rate bar and PnL.
+- **Monthly report:** Same W/L count addition to "By Session" rows.
+
+### Active sessions after v1.1
+
+| Window | SGT | Threshold |
+|---|---|---|
+| Dead zone | 04:00–07:59 | No trading |
+| Tokyo | 08:00–15:59 | ≥ 5/6 |
+| London | 16:00–20:59 | ≥ 4/6 |
+| US session | 21:00–23:59 | ≥ 4/6 ← re-enabled |
+| US continuation | 00:00–03:59 | ≥ 4/6 |

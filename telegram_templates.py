@@ -462,9 +462,13 @@ def msg_daily_report(
     if session_stats:
         sess_block = f"{_DIV}\nSession breakdown\n"
         for name, s in session_stats.items():
-            pnl_str = f"${s['net_pnl']:+.2f}"
-            result  = "✅" if s["net_pnl"] > 0 else ("❌" if s["net_pnl"] < 0 else "—")
-            sess_block += f"  {name:<14} {s['count']}t  {pnl_str}  {result}\n"
+            if s["count"] == 0:
+                continue
+            wr_str   = f"{s['win_rate']:.0f}%"
+            wl_str   = f"{s['wins']}W/{s['losses']}L"
+            pnl_str  = f"${s['net_pnl']:+.2f}"
+            sess_icon = _session_icon(name)
+            sess_block += f"  {sess_icon} {name:<12} {wl_str:<8} {wr_str:<6} {pnl_str}\n"
 
     return (
         f"📊 Daily Summary — {day_label}\n"
@@ -501,7 +505,7 @@ def msg_weekly_report(week_label, stats, sessions, setups, report_time, pairs=No
         if not data: return ""
         mx = max(s["win_rate"] for s in data.values()) or 1
         return "".join(
-            f"  {n:<10} {_ascii_bar(s['win_rate'],mx)} {s['win_rate']:>5.1f}%  ${s['net_pnl']:+.2f}  ({s['count']}t)\n"
+            f"  {n:<10} {_ascii_bar(s['win_rate'],mx)} {s['win_rate']:>5.1f}%  {s['wins']}W/{s['losses']}L  ${s['net_pnl']:+.2f}\n"
             for n, s in data.items()
         )
 
@@ -557,7 +561,7 @@ def msg_monthly_report(month_label, stats, sessions, setups, scores,
         if not data: return ""
         mx = max(s["win_rate"] for s in data.values()) or 1
         return "".join(
-            f"  {n[:w]:<{w}} {_ascii_bar(s['win_rate'],mx)} {s['win_rate']:>5.1f}%  ({s['count']}t)\n"
+            f"  {n[:w]:<{w}} {_ascii_bar(s['win_rate'],mx)} {s['win_rate']:>5.1f}%  {s['wins']}W/{s['losses']}L\n"
             for n, s in data.items()
         )
 
