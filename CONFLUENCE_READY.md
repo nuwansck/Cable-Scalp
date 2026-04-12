@@ -1,0 +1,197 @@
+# Cable Scalp v1.0 — Technical Specification & Operations Wiki
+
+**Bot name:** Cable Scalp v1.0
+**Instrument:** GBP/USD (Cable) only
+**Exchange:** OANDA (practice & live)
+**Deployment:** Railway (PaaS)
+**Signal timeframe:** M5 (5-minute candles)
+**Cycle interval:** Every 5 minutes
+**Status:** Demo mode (`OANDA_DEMO=true`)
+
+---
+
+## 1. Purpose & Scope
+
+Cable Scalp v1.0 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
+with minimum score thresholds per session. All configuration lives in `settings.json`.
+
+---
+
+## 2. Architecture Overview
+
+```
+scheduler.py  (APScheduler — every 5 min)
+      |
+      ├── run_bot_cycle()  ← called once per cycle
+      |       |
+      |       ├── _guard_phase()     Market closed / dead zone / caps / news
+      |       ├── _signal_phase()    SignalEngine.analyze() → score + direction
+      |       └── _execution_phase() Margin check → spread check → place_order()
+      |
+      ├── send_daily_report()   04:00 SGT Mon–Fri
+      ├── send_weekly_report()  Monday 08:15 SGT
+      └── send_monthly_report() First Monday 08:00 SGT
+```
+
+---
+
+## 3. Signal Engine
+
+**File:** `signals.py` → `SignalEngine.analyze()`
+
+Three components scored each M5 cycle:
+
+### 3a. EMA Crossover (M5)
+- EMA9 fresh cross above EMA21: **+3 pts** → `EMA Fresh Cross Up` (BUY)
+- EMA9 fresh cross below EMA21: **+3 pts** → `EMA Fresh Cross Down` (SELL)
+- EMA9 aligned above EMA21 (no fresh cross): **+1 pt** → `EMA Trend Up`
+- EMA9 aligned below EMA21 (no fresh cross): **+1 pt** → `EMA Trend Down`
+
+### 3b. ORB Confirmation (M15 first candle of session)
+- Price beyond ORB, break **fresh** (<60 min): **+2 pts**
+- Price beyond ORB, break **aging** (60–120 min): **+1 pt**
+- ORB not formed or price inside range: **+0 pts**
+
+### 3c. CPR Bias (Daily pivot)
+- BUY signal and price above daily pivot: **+1 pt**
+- SELL signal and price below daily pivot: **+1 pt**
+
+**Max score: 6/6**
+
+---
+
+## 4. Session Schedule
+
+All times SGT (UTC+8):
+
+| Window | SGT | Score threshold | Trade cap |
+|---|---|---|---|
+| Dead zone | 04:00–07:59 | No trading | — |
+| Tokyo | 08:00–15:59 | ≥ 5/6 | 10 |
+| London | 16:00–20:59 | ≥ 4/6 | 10 |
+| US session | 21:00–23:59 | **Disabled** | — |
+| US continuation | 00:00–03:59 | ≥ 4/6 | 10 |
+
+Market fully closed Saturday and Sunday. Monday opens at 08:00 SGT.
+
+---
+
+## 5. Position Sizing
+
+Units calculated from `position_usd ÷ sl_usd_rec` per unit.
+GBP/USD uses static `pip_value_usd = $10.00` (standard for USD-quoted pairs).
+
+| Score | Position | Risk | Units (GBP/USD 18p SL) |
+|---|---|---|---|
+| 4 | $30 partial | 1.5% of $2k | ~16,667 |
+| 5–6 | $48 full | 2.4% of $2k | ~26,667 |
+
+SL/TP (GBP/USD):
+
+| Pair | SL | TP | RR | Break-even WR | pip_value_usd |
+|---|---|---|---|---|---|
+| GBP/USD | 18p | 30p | 1.67× | 37.5% | $10.00 (static) |
+
+---
+
+## 6. Risk Guards
+
+Executed in order each cycle, early return on first failure:
+
+1. **Market closed** — Saturday / Sunday / Monday pre-08:00
+2. **Dead zone early exit** — 04:00–07:59 AND no open trades → zero API calls
+3. **News block** — high-impact event within ±30 min
+4. **News penalty** — medium event → −1 to score
+5. **Loss cooldown** — consecutive losses → 30 min pause
+6. **Friday cutoff** — after 23:00 SGT Friday
+7. **Session check** — outside all active windows
+8. **Daily loss cap** — 8 losing trades → pause until 08:00 SGT
+9. **Session cap** — per-window trade limit reached
+10. **Concurrent cap** — 1 trade per pair, 2 globally
+11. **Margin guard** — units reduced if margin insufficient
+12. **Min trade units** — reject if units < 1,000 after margin guard
+13. **Spread guard** — skip if spread > limit for session
+
+---
+
+## 7. H1 Trend Filter
+
+Fetches H1 EMA21 each cycle to classify the trade as aligned or counter-trend.
+
+| Mode | Effect |
+|---|---|
+| `soft` (current) | Labels trade as aligned/counter-trend in record — no blocks |
+| `strict` | Blocks counter-trend entries entirely |
+
+Flip to `strict` in `settings.json` once data confirms counter-trend trades have
+materially lower win rate.
+
+---
+
+## 8. Telegram Alerts
+
+All message cards defined in `telegram_templates.py`.
+WATCHING cards for score < `telegram_min_score_alert` (default 3) are suppressed.
+Score 1–2 = noise; score 3+ sends.
+
+### Report schedule
+
+| Report | Time | Content |
+|---|---|---|
+| Daily | 04:00 SGT Mon–Fri | Session breakdown + day total + MTD |
+| Weekly | Monday 08:15 SGT | Session + setup bars |
+| Monthly | First Monday 08:00 SGT | Full breakdown + verdict |
+
+---
+
+## 9. Key Files
+
+| File | Purpose |
+|---|---|
+| `scheduler.py` | Entry point — APScheduler, jobs, startup |
+| `bot.py` | Trade cycle: guard → signal → execution |
+| `signals.py` | EMA + ORB + CPR engine |
+| `oanda_trader.py` | OANDA REST API wrapper |
+| `telegram_templates.py` | All Telegram message cards |
+| `reporting.py` | Daily / weekly / monthly report builders |
+| `config_loader.py` | Settings loading + all defaults |
+| `settings.json` | **Single source of truth for all config** |
+| `database.py` | SQLite — cycle + signal + state logging |
+| `reconcile_state.py` | Startup reconciliation of open trades |
+| `news_filter.py` | Forex Factory news block/penalty |
+
+---
+
+## 10. Data Directory (`/data` on Railway volume)
+
+| File | Purpose |
+|---|---|
+| `trade_history.json` | All trade records — open + closed |
+| `settings.json` | Volume copy (synced from bundle on startup) |
+| `runtime_state.json` | Last cycle status, balance |
+| `ops_state_gbpusd.json` | GBP/USD ops state (session, caps, alerts) |
+| `score_cache_gbpusd.json` | Last signal dedup |
+| `calendar_cache.json` | Cached Forex Factory events |
+| `rf_scalp.db` | SQLite — cycle log, signal log |
+
+---
+
+## 11. Deployment
+
+### Railway
+1. Push folder to GitHub
+2. New Railway project → Deploy from GitHub
+3. Set environment variables (see below)
+4. Add persistent volume mounted at `/data`
+5. Railway builds and deploys automatically
+
+### Environment Variables
+
+| Variable | Required | Notes |
+|---|---|---|
+| `OANDA_API_KEY` | ✅ | Practice or live |
+| `OANDA_ACCOUNT_ID` | ✅ | e.g. `101-003-XXXXXXX-001` |
+| `OANDA_DEMO` | ✅ | `true` / `false` |
+| `TELEGRAM_BOT_TOKEN` | ✅ | From @BotFather |
+| `TELEGRAM_CHAT_ID` | ✅ | Your chat/channel ID |
