@@ -408,7 +408,7 @@ def msg_startup(
         f"Sizes:     ${position_partial_usd} (score 4)  |  ${position_full_usd} (score 5–6)\n"
         f"{h1_line}"
         f"{_DIV}\n"
-        f"Sessions (SGT)\n"
+        f"Sessions (SGT = UTC+8)\n"
         f"  ✈️  {dead_zone_start:02d}:00–{dead_zone_end:02d}:59  Dead zone\n"
         f"  🗼 {tokyo_start:02d}:00–{tokyo_end:02d}:59  Tokyo      cap {max_trades_tokyo}  score≥{tok_thr}\n"
         f"  🇬🇧 {london_start:02d}:00–{london_end:02d}:59  London     cap {max_trades_london}  score≥{lon_thr}\n"

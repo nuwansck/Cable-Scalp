@@ -89,3 +89,47 @@ Requires 30–50 trades per window before any session-level conclusions.
 | London | 16:00–20:59 | ≥ 4/6 |
 | US session | 21:00–23:59 | ≥ 4/6 ← re-enabled |
 | US continuation | 00:00–03:59 | ≥ 4/6 |
+
+---
+
+## v1.2.0 — 2026-04-13
+
+### Investigation findings (no code defects found)
+
+Full review of container logs and OANDA transaction history confirmed:
+
+**Dead zone concern — resolved as false alarm.**
+Telegram card showed "06:09" timestamp — this was the user's phone displaying UTC
+time, not SGT. OANDA CSV confirms trade entry at `2026-04-13 08:39:52 +08 SGT`,
+correctly inside Tokyo session (08:00–15:59 SGT). Dead zone (04:00–07:59 SGT)
+had already ended 39 minutes prior. No dead zone entry occurred.
+
+**Trade performance (first live trade):**
+- Entry: BUY 17,911 units @ 1.33991 SGT 08:39
+- Close: TP hit @ 1.34292 SGT 15:51 (+30.1p, +$53.91)
+- Duration: 7h 11m — slow Tokyo drift, won correctly
+- Balance: $2,000.01 → $2,053.92
+
+**Margin guard:** Correctly adjusted 26,667 → 17,911 units due to $2k account
+margin ceiling with 0.60 safety factor. Self-corrects as balance grows.
+
+**Calendar 429 rate limiting:** Handled correctly with 15-min backoff.
+Zero trading impact.
+
+### Changes
+
+**Defense in depth — hard execution-phase dead zone block:**
+Added explicit `is_dead_zone_time()` check at the top of `_execution_phase()`
+as a final hard stop before any OANDA order call. If somehow the guard chain
+is bypassed, this block fires with a WARNING log and suppresses the order.
+Under normal operation this block never triggers — it exists purely as a
+safety net.
+
+**Dead zone fallthrough logging upgraded:**
+When the bot falls through the dead zone check due to open trades (management
+mode), log level raised from DEBUG → INFO so it's visible in Railway logs.
+Message: "Dead zone — N open trade(s) present, management mode only. No new entries."
+
+**Startup Telegram card — timezone clarity:**
+Sessions header updated from "Sessions (SGT)" to "Sessions (SGT = UTC+8)" to
+eliminate confusion when viewing Telegram from phones in non-SGT timezones.

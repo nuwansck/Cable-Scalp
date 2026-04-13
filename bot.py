@@ -924,8 +924,8 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
                             summary={"stage": "dead_zone_early_exit",
                                      "instrument": instrument})
             return None
-        log.debug("[%s] Dead zone but %d open trade(s) — running management.",
-                  instrument, len(_open_in_history), extra={"run_id": run_id})
+        log.info("[%s] Dead zone — %d open trade(s) present, management mode only. No new entries.",
+                 instrument, len(_open_in_history), extra={"run_id": run_id})
 
     if settings.get("news_filter_enabled", True):
         try:
@@ -1573,6 +1573,17 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
     news_penalty     = ctx["news_penalty"]
     pip              = ctx["pip"]
     dp               = ctx["dp"]
+
+    # ── Hard dead zone execution block (defense in depth) ──────────────────
+    # Even if session logic somehow passes, no new order can be placed
+    # during 04:00–07:59 SGT. This is a final hard stop before any OANDA call.
+    if is_dead_zone_time(now_sgt, settings):
+        log.warning("[%s] Hard dead zone block fired at execution phase (%s SGT) — "
+                    "order suppressed. Investigate guard chain.",
+                    instrument, now_sgt.strftime("%H:%M"), extra={"run_id": run_id})
+        db.finish_cycle(run_id, status="SKIPPED",
+                        summary={"stage": "dead_zone_hard_block", "instrument": instrument})
+        return
 
     sl_price, tp_price = compute_sl_tp_prices(entry, direction, sl_usd, tp_usd, dp)
 
