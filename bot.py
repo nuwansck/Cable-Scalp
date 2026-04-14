@@ -66,9 +66,9 @@ SESSION_BANNERS = {
 
 
 def _build_sessions(settings: dict) -> list:
-    """Build the SESSIONS list from settings, matching the tuple format:
-    (name, macro, start_hour, end_hour, fallback_threshold).
-    Defaults: early-US 00–03, Tokyo 08–15, London 16–20, late-US 21–23.
+    """Build the SESSIONS list from settings.
+    US windows excluded when us_session_start_hour >= 99 (disabled sentinel).
+    Tuple format: (name, macro, start_hour, end_hour, fallback_threshold).
     """
     lon_s  = int(settings.get("london_session_start_hour",    16))
     lon_e  = int(settings.get("london_session_end_hour",      20))
@@ -77,12 +77,13 @@ def _build_sessions(settings: dict) -> list:
     us_e2  = int(settings.get("us_session_early_end_hour",     3))
     tok_s  = int(settings.get("tokyo_session_start_hour",      8))
     tok_e  = int(settings.get("tokyo_session_end_hour",       15))
-    return [
-        ("US Window",     "US",     0,     us_e2, 3),
+    sessions = [
         ("Tokyo Window",  "Tokyo",  tok_s, tok_e, 5),
         ("London Window", "London", lon_s, lon_e, 4),
-        ("US Window",     "US",     us_s,  us_e,  4),
     ]
+    if us_s  < 99: sessions.append(("US Window", "US", us_s,  us_e,  4))
+    if us_e2 < 99: sessions.append(("US Window", "US", 0,     us_e2, 3))
+    return sessions
 
 
 # ── Pair helpers ──────────────────────────────────────────────────────────────
@@ -864,7 +865,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
         log.warning(w, extra={"run_id": run_id})
 
     log.info("=== %s | %s | %s SGT ===",
-             settings.get("bot_name", "RF Scalp"), instrument,
+             settings.get("bot_name", "Cable Scalp"), instrument,
              now_sgt.strftime("%Y-%m-%d %H:%M"),
              extra={"run_id": run_id, "pair": instrument})
     update_runtime_state(

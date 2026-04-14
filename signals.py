@@ -63,14 +63,17 @@ _DEFAULT_ORB_HOURS = {
 
 def _build_orb_sessions(settings: dict | None = None) -> dict:
     """Return ORB session open-hour map derived from settings.
-    Falls back to defaults if settings are absent.
+    US excluded when us_session_start_hour >= 99 (disabled sentinel).
     """
     s = settings or {}
-    return {
+    us_h = int(s.get("us_session_start_hour", 21))
+    sessions = {
         "London": (int(s.get("london_session_start_hour", 16)), 0),
-        "US":     (int(s.get("us_session_start_hour",     21)), 0),
         "Tokyo":  (int(s.get("tokyo_session_start_hour",   8)), 0),
     }
+    if us_h < 99:
+        sessions["US"] = (us_h, 0)
+    return sessions
 
 
 def score_to_position_usd(score: int, settings: dict | None = None) -> int:
@@ -467,17 +470,18 @@ class SignalEngine:
         orb_sessions = _build_orb_sessions(settings)
         s      = settings or {}
         lon_h  = orb_sessions["London"][0]
-        us_h   = orb_sessions["US"][0]
         tok_h  = orb_sessions["Tokyo"][0]
         lon_e  = int(s.get("london_session_end_hour",    20))
-        us_e   = int(s.get("us_session_end_hour",        23))
-        us_e2  = int(s.get("us_session_early_end_hour",   3))
         tok_e  = int(s.get("tokyo_session_end_hour",     15))
         h = now_sgt.hour
-        if lon_h <= h <= lon_e:   return "London"
-        if us_h  <= h <= us_e:    return "US"    # late window: 21–23
-        if 0     <= h <= us_e2:   return "US"    # early window: 00–03
-        if tok_h <= h <= tok_e:   return "Tokyo"
+        if lon_h <= h <= lon_e: return "London"
+        # US checks only when session is enabled (start_hour < 99)
+        us_h  = int(s.get("us_session_start_hour",      21))
+        us_e  = int(s.get("us_session_end_hour",        23))
+        us_e2 = int(s.get("us_session_early_end_hour",   3))
+        if us_h  < 99 and us_h <= h <= us_e:  return "US"   # late: 21–23
+        if us_e2 < 99 and 0    <= h <= us_e2: return "US"   # early: 00–03
+        if tok_h <= h <= tok_e: return "Tokyo"
         return None
 
     def _get_orb(self, session_name, instrument: str, now_sgt: _dt,

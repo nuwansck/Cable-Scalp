@@ -159,3 +159,37 @@ breakdown. `today_start` / `today_trades` variables removed.
 Both sections always consistent.
 
 **File changed:** `reporting.py`
+
+---
+
+## v1.4.0 — 2026-04-14
+
+Parity release — brings Cable Scalp in line with Ninja Scalp v1.1 architecture.
+
+### Fix 1 — Railway healthcheck 503 during warmup
+Health handler returned `503` when scheduler not yet running. Matches the fix
+applied to Ninja Scalp v1.0.2. Now always returns `200` while process is alive.
+Status field: `"starting"` during warmup, `"ok"` once scheduler running.
+
+### Fix 2 — Health server at entry point
+`_start_health_server()` moved to `__main__` before `main()`. Matches Ninja
+Scalp v1.0.1 fix. Health server binds immediately on process start.
+
+### Fix 3 — Session sentinel guard (`_build_sessions`)
+`_build_sessions()` now excludes US windows when `us_session_start_hour >= 99`.
+Prevents "US Window" session label appearing when US is disabled in future.
+Matches Ninja Scalp v1.1 fix.
+
+### Fix 4 — ORB sentinel guards (`signals.py`)
+`_build_orb_sessions()` and `_get_active_session()` now guard against the `99`
+disabled sentinel. Prevents `ValueError: hour must be in 0..23` if US session
+is ever set to disabled. Matches Ninja Scalp v1.0.3 fix.
+
+### Fix 5 — Legacy code removed
+- `startup_checks.py`: removed `sl_pct` / `rr_ratio` pair-level checks
+  (not applicable to fixed-pip `pair_sl_tp` architecture)
+- `bot.py`: `"RF Scalp"` fallback string → `"Cable Scalp"`
+
+### Fix 6 — Telegram US continuation disabled label
+Startup card now shows `🚫 US cont.    disabled` when
+`us_session_early_end_hour >= 99`, consistent with Ninja Scalp v1.1.

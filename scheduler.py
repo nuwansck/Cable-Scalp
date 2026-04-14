@@ -46,14 +46,15 @@ class _HealthHandler(BaseHTTPRequestHandler):
                 running  = bool(_scheduler_ref and _scheduler_ref.running)
                 uptime_s = int(_time.time() - _process_start) if _process_start else 0
                 body = _json.dumps({
-                    "status":             "ok" if running else "degraded",
+                    "status":             "ok" if running else "starting",
                     "scheduler_running":  running,
                     "last_cycle_started": state.get("last_cycle_started"),
                     "last_cycle_status":  state.get("status"),
                     "oanda_failures":     int(state.get("oanda_consecutive_failures", 0)),
                     "uptime_s":           uptime_s,
                 }, separators=(",", ":")).encode()
-                code = 200 if running else 503
+                # Always 200 while alive — scheduler warmup is not a failure
+                code = 200
             except Exception as exc:
                 body = _json.dumps({"status": "error", "detail": str(exc)}).encode()
                 code = 500
@@ -143,8 +144,6 @@ def main():
     # Singleton alert — constructed once, shared across all cycles.
     # Avoids re-reading secrets + creating new HTTP sessions every 5 minutes.
     _alert = TelegramAlert()
-
-    _start_health_server()
 
     logger.info('%s — Scheduler starting', settings.get('bot_name', 'Cable Scalp v1.0'))
     logger.info('DATA_DIR : %s', DATA_DIR)
@@ -317,6 +316,10 @@ def main():
 
 if __name__ == '__main__':
     import time as _crash_time
+    # Start health server IMMEDIATELY — before main() loads settings or connects
+    # to OANDA. Ensures Railway's healthcheck at /health always gets a 200
+    # response even during startup warmup.
+    _start_health_server()
     # Crash-loop guard: if the process dies and restarts in under 30 seconds
     # repeatedly, sleep before exiting so Railway's restart backoff has time
     # to work and we don't burn through retries in a burst.

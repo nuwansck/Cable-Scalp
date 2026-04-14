@@ -414,9 +414,10 @@ def msg_startup(
         f"  🇬🇧 {london_start:02d}:00–{london_end:02d}:59  London     cap {max_trades_london}  score≥{lon_thr}\n"
         + (f"  🚫 US session   disabled\n" if us_start >= 99 else
            f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US         cap {max_trades_us}  score≥{us_thr}\n")
-        + f"  🗽 00:00–{us_early_end:02d}:59  US cont.   cap {max_trades_us}  score≥{us_thr}\n"
-        f"{_DIV}\n"
-        f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss cap: {max_losing_day}/day\n"
+        + (f"  🚫 US cont.    disabled\n" if us_early_end >= 99 else
+           f"  🗽 00:00–{us_early_end:02d}:59  US cont.   cap {max_trades_us}  score≥{us_thr}\n")
+        + f"{_DIV}\n"
+        + f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss cap: {max_losing_day}/day\n"
         f"Global cap: {max_total_open} open trades"
     )
 

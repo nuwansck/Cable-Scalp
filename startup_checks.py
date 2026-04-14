@@ -47,16 +47,8 @@ def run_startup_checks() -> list[str]:
             pip = float(pair_cfg.get("pip_size", 0) or 0)
             if pip <= 0:
                 warnings.append(f"pairs.{pair_name}.pip_size must be > 0")
-            sl_pct = float(pair_cfg.get("sl_pct", 0.002) or 0.002)
-            if not (0.0001 <= sl_pct <= 0.05):
-                warnings.append(
-                    f"pairs.{pair_name}.sl_pct={sl_pct:.4f} looks unusual (expected 0.0001–0.05)"
-                )
-            rr = float(pair_cfg.get("rr_ratio", 2.5) or 2.5)
-            if rr < 1.0:
-                warnings.append(
-                    f"pairs.{pair_name}.rr_ratio={rr} is below 1.0 — risk/reward is unfavourable"
-                )
+            # SL/TP validated via pair_sl_tp config (fixed-pip mode)
+            pass
 
     if not CALENDAR_CACHE_FILE.exists():
         warnings.append(
