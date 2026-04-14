@@ -349,13 +349,11 @@ def send_daily_report() -> None:
             if sess_trades:
                 session_stats[label] = _stats(sess_trades)
 
-        # Today's trading day window for daily report
-        # At 04:00 SGT, "today" covers 16:00 yesterday → 03:59 today
-        today_start = (now - timedelta(hours=12)).replace(
-            hour=16, minute=0, second=0, microsecond=0)
-        today_trades = _trades_in_window(filled, today_start, now)
-        today_stats  = _stats(today_trades)
-        today_label  = today_start.strftime("%a %d %b %Y")
+        # Day total — use pd_trades (same window as session breakdown)
+        # pd_trades = full prior trading day (00:00 → 24:00 SGT)
+        # Fixes: day total was using 16:00 SGT start, missing Tokyo trades
+        today_stats = _stats(pd_trades)
+        today_label = pd_start.strftime("%a %d %b %Y")
 
         msg = msg_daily_report(
             day_label       = today_label,

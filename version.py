@@ -1,2 +1,2 @@
-VERSION     = "1.2.0"
-DESCRIPTION = "Cable Scalp v1.2 — Dead zone execution hard block, improved logging, timezone clarity"
+VERSION     = "1.3.0"
+DESCRIPTION = "Cable Scalp v1.3 — Daily report day total / session breakdown consistency fix"

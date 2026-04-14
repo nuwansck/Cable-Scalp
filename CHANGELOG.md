@@ -133,3 +133,29 @@ Message: "Dead zone — N open trade(s) present, management mode only. No new en
 **Startup Telegram card — timezone clarity:**
 Sessions header updated from "Sessions (SGT)" to "Sessions (SGT = UTC+8)" to
 eliminate confusion when viewing Telegram from phones in non-SGT timezones.
+
+---
+
+## v1.3.0 — 2026-04-14
+
+### Bug fix — Daily report day total inconsistent with session breakdown
+
+**Problem:**
+Session breakdown and day total showed different counts for the same day.
+Example from Apr 13:
+  Session: Tokyo 1W/0L + London 0W/2L + US 1W/0L = **2W/2L (4 trades)**
+  Day total: **1W/2L (3 trades)** ← wrong
+
+**Root cause:**
+Two different time windows were used in the same report:
+- Session breakdown used `pd_trades` = full day 00:00–24:00 SGT
+- Day total used `today_trades` starting at 16:00 SGT (London open)
+- Any Tokyo trade (08:00–15:59 SGT) appeared in session breakdown
+  but not in day total — missed because it fell before 16:00.
+
+**Fix:**
+Day total now uses `pd_trades` — the same full-day window as the session
+breakdown. `today_start` / `today_trades` variables removed.
+Both sections always consistent.
+
+**File changed:** `reporting.py`
