@@ -200,8 +200,8 @@ def validate_settings(settings: dict) -> dict:
 
     settings.setdefault("signal_threshold",           4)
     # 2.4% risk/trade on $2,000 account (full $48) / 1.5% (partial $30)
-    settings.setdefault("position_full_usd",          48)
-    settings.setdefault("position_partial_usd",       30)
+    settings.setdefault("position_full_usd",          60)
+    settings.setdefault("position_partial_usd",       45)
     settings.setdefault("account_balance_override",   0)
     settings.setdefault("enabled",                    True)
     settings.setdefault("pip_size",                   0.0001)
@@ -258,7 +258,7 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("tokyo_session_end_hour",     15)
     settings.setdefault("max_trades_tokyo",           10)
     # global concurrent-trade cap (0 = per-pair limits only)
-    settings.setdefault("max_total_open_trades",       2)
+    settings.setdefault("max_total_open_trades",       1)
     # TP2 reference RR multiplier for the trade opened Telegram alert
     settings.setdefault("tp2_rr_reference",            3.0)
     # minimum units after margin guard — reject micro-orders gracefully

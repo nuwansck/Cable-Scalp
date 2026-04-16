@@ -220,6 +220,31 @@ def _score_breakdown(trades: list) -> dict[int, dict]:
 
 # ── Window helpers ─────────────────────────────────────────────────────────────
 
+
+def _h1_breakdown(trades: list) -> dict | None:
+    """Return H1 filter split: aligned vs counter-trend stats.
+    Returns None if no trades have h1_aligned field recorded.
+    """
+    aligned_trades  = [t for t in trades if t.get("h1_aligned") is True]
+    counter_trades  = [t for t in trades if t.get("h1_aligned") is False]
+
+    if not aligned_trades and not counter_trades:
+        return None  # h1 data not recorded (old trades)
+
+    def _grp(grp):
+        wins   = sum(1 for t in grp if (t.get("realized_pnl_usd") or 0) > 0)
+        losses = sum(1 for t in grp if (t.get("realized_pnl_usd") or 0) < 0)
+        net    = round(sum(t.get("realized_pnl_usd") or 0 for t in grp), 2)
+        wr     = round(wins / len(grp) * 100, 1) if grp else 0.0
+        return {"count": len(grp), "wins": wins, "losses": losses,
+                "net_pnl": net, "win_rate": wr}
+
+    return {
+        "aligned": _grp(aligned_trades),
+        "counter": _grp(counter_trades),
+    }
+
+
 def _prior_trading_day(now: datetime) -> tuple[datetime, datetime]:
     """Return (start, end) for the prior trading day in SGT.
     On Monday, looks back to Friday. Skips Saturday/Sunday.
@@ -400,12 +425,15 @@ def send_weekly_report() -> None:
             pw_pairs[instr].append(t)
         pair_stats = {k: _stats(v) for k, v in pw_pairs.items()}
 
+        h1_stats = _h1_breakdown(pw_trades)
+
         msg = msg_weekly_report(
             week_label = pw_label,
             stats      = pw_stats,
             sessions   = sessions,
             setups     = setups,
             pairs      = pair_stats,
+            h1_stats   = h1_stats,
             report_time= now.strftime("%H:%M SGT"),
         )
         ok = TelegramAlert().send(msg)
@@ -499,12 +527,15 @@ def send_monthly_report() -> None:
         ppm_pnl    = round(sum(t["realized_pnl_usd"] for t in ppm_trades), 2) if ppm_trades else None
         mom_delta  = round(pm_stats["net_pnl"] - ppm_pnl, 2) if ppm_pnl is not None else None
 
+        h1_stats = _h1_breakdown(pm_trades)
+
         msg = msg_monthly_report(
             month_label = pm_label,
             stats       = pm_stats,
             sessions    = sessions,
             setups      = setups,
             scores      = scores,
+            h1_stats    = h1_stats,
             mom_delta   = mom_delta,
             prior_month_pnl = ppm_pnl,
             report_time = now.strftime("%H:%M SGT"),

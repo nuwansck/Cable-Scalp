@@ -53,8 +53,8 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `position_full_usd` | `48` | Dollar risk for score 5–6 (full position). |
-| `position_partial_usd` | `30` | Dollar risk for score 4 (partial position). |
+| `position_full_usd` | `60` | Score 5–6 → ~20,000 units → **$2.00/pip** | Dollar risk for score 5–6 (full position). |
+| `position_partial_usd` | `45` | Score 4 → ~15,000 units → **$1.50/pip** | Dollar risk for score 4 (partial position). |
 | `min_rr_ratio` | `1.6` | Minimum RR — trade blocked if computed RR falls below this. |
 
 ### `pair_sl_tp` — GBP/USD fixed pip values
@@ -84,7 +84,7 @@ GBP/USD SL/TP summary:
 
 | Key | Default | Description |
 |---|---|---|
-| `max_total_open_trades` | `2` | Global hard cap — max open trades across all pairs simultaneously. |
+| `max_total_open_trades` | `1` | Global hard cap — max open trades across all pairs simultaneously. |
 | `max_concurrent_trades` | `1` | Max open trades per pair. |
 | `max_losing_trades_day` | `8` | Daily loss cap — bot pauses until 08:00 SGT. |
 | `max_trades_day` | `20` | Max trades per trading day. |

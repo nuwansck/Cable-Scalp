@@ -193,3 +193,43 @@ is ever set to disabled. Matches Ninja Scalp v1.0.3 fix.
 ### Fix 6 — Telegram US continuation disabled label
 Startup card now shows `🚫 US cont.    disabled` when
 `us_session_early_end_hour >= 99`, consistent with Ninja Scalp v1.1.
+
+---
+
+## v1.5.0 — 2026-04-16
+
+### Position sizing — $2.00/$1.50 per pip target
+
+| | v1.4 | v1.5 | $/pip |
+|---|---|---|---|
+| Full (score 5–6) | $48 → 26,667 units | **$60 → 20,000 units** | **$2.00/pip** |
+| Partial (score 4) | $30 → 16,667 units | **$45 → 15,000 units** | **$1.50/pip** |
+
+Sizing aligned with Fiber Scalp v1.5 — consistent pip value across the Cable/Fiber fleet.
+
+### Fix — max_total_open_trades corrected to 1
+
+Cable Scalp is single-pair (GBP/USD) with max_concurrent_trades: 1.
+Global cap was 2 — misleading since per-pair cap of 1 always bound first.
+Fixed: `max_total_open_trades: 2 → 1`. Startup card now shows "Global cap: 1 open trade".
+
+### H1 filter split in weekly and monthly reports
+
+Aligned vs counter-trend WR now appears automatically every Monday in the
+weekly report and monthly report. No manual JSON analysis needed.
+
+```
+H1 Filter [soft]
+  Aligned    ██████████  72.0%  9W/3L  $+156.00
+  Counter ⚠️  ████░░░░░░  33.3%  1W/2L  $-42.00
+  → Counter-trend 38.7pts lower — consider strict mode
+```
+
+Recommendation logic:
+- < 5 counter trades → need more data
+- Diff ≥ 20pts → consider strict mode
+- Diff ≥ 10pts → monitor closely
+- Diff < 10pts → soft mode justified
+
+**Files changed:** `settings.json`, `bot.py`, `config_loader.py`, `scheduler.py`,
+`startup_checks.py`, `telegram_templates.py`, `reporting.py`, all docs.

@@ -57,7 +57,7 @@ def run_startup_checks() -> list[str]:
         )
 
     # global concurrent-trade cap sanity
-    max_total = int(settings.get("max_total_open_trades", 2))
+    max_total = int(settings.get("max_total_open_trades", 1))
     if max_total < 0:
         warnings.append("max_total_open_trades must be >= 0 (0 = disabled)")
 

@@ -1,8 +1,8 @@
-# Cable Scalp v1.4 — GBP/USD M5 Scalping Bot
+# Cable Scalp v1.5 — GBP/USD M5 Scalping Bot
 
 > **Deployed on Railway · OANDA API · Telegram Alerts**
 
-Cable Scalp v1.4 is a dedicated automated M5 scalping bot for **GBP/USD (Cable)** on OANDA.
+Cable Scalp v1.5 is a dedicated automated M5 scalping bot for **GBP/USD (Cable)** on OANDA.
 Single pair, clean data, focused execution.
 Strategy: EMA 9/21 crossover + Opening Range Breakout (ORB) + CPR pivot bias, scored 1–6/6.
 
@@ -24,7 +24,7 @@ Strategy: EMA 9/21 crossover + Opening Range Breakout (ORB) + CPR pivot bias, sc
 
 ## Strategy Overview
 
-Cable Scalp v1.4 runs on **M5 (5-minute) candles** with a 5-minute cycle.
+Cable Scalp v1.5 runs on **M5 (5-minute) candles** with a 5-minute cycle.
 Every cycle the signal engine evaluates three components and scores them 0–6:
 
 | Component | Points | Condition |
@@ -64,7 +64,7 @@ All times SGT (UTC+8):
 🗽 00:00–03:59  US continuation score ≥ 4/6  cap 10
 ```
 
-Day reset: 08:00 SGT. Global cap: 2 open trades simultaneously.
+Day reset: 08:00 SGT. Global cap: 1 open trade simultaneously.
 Market closed: Saturday and Sunday.
 
 ---
@@ -94,7 +94,7 @@ See `SETTINGS.md` for the full key reference.
 Key settings in `settings.json`:
 ```json
 {
-  "bot_name":              "Cable Scalp v1.4",
+  "bot_name":              "Cable Scalp v1.5",
   "position_full_usd":     48,
   "position_partial_usd":  30,
   "max_total_open_trades": 2,
@@ -114,7 +114,7 @@ Key settings in `settings.json`:
 
 ## Railway Deployment
 
-1. Push the `Cable Scalp v1.4` folder to a GitHub repository
+1. Push the `Cable Scalp v1.5` folder to a GitHub repository
 2. Connect to Railway → New Project → Deploy from GitHub
 3. Set environment variables (see below)
 4. Add a persistent volume mounted at `/data`
@@ -137,7 +137,7 @@ Key settings in `settings.json`:
 ## File Structure
 
 ```
-Cable Scalp v1.4/
+Cable Scalp v1.5/
 ├── scheduler.py          # APScheduler — main entry point
 ├── bot.py                # Trade cycle logic
 ├── signals.py            # EMA + ORB + CPR signal engine

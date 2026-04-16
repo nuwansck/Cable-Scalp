@@ -289,7 +289,7 @@ def main():
                 london_end=int(settings.get('london_session_end_hour', 20)),
                 us_start=int(settings.get('us_session_start_hour', 21)),
                 us_end=int(settings.get('us_session_end_hour', 23)),
-                max_total_open=int(settings.get('max_total_open_trades', 2)),
+                max_total_open=int(settings.get('max_total_open_trades', 1)),
                 tg_min_score=int(settings.get('telegram_min_score_alert', 3)),
                 h1_filter_enabled=bool(settings.get('h1_filter_enabled', True)),
                 h1_filter_mode=settings.get('h1_filter_mode', 'soft'),
