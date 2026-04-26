@@ -1,4 +1,4 @@
-"""Telegram message templates for Cable Scalp v1.0
+"""Telegram message templates for Cable Scalp v1.6
 AtomicFX-style: clean, state-change only, minimal noise.
 """
 from __future__ import annotations
@@ -63,7 +63,7 @@ def msg_signal_update(
     reason="", mandatory_checks=None, quality_checks=None,
     execution_checks=None, cycle_minutes=5, signal_threshold=4,
     setup="", orb_age_min=None, orb_formed=False,
-    h1_trend="UNKNOWN", h1_aligned=True, h1_filter_mode="soft",
+    h1_trend="UNKNOWN", h1_aligned=True, h1_filter_mode="strict",
 ) -> str:
     bot, pair = _split_banner(banner)
     s_str = f"{score}/6"
@@ -77,7 +77,7 @@ def msg_signal_update(
         if h1_trend in ("UNKNOWN", "DISABLED"): return ""
         icon   = "🟢" if h1_trend == "BULLISH" else ("🔴" if h1_trend == "BEARISH" else "⬜")
         align  = "aligned" if h1_aligned else "counter-trend ⚠️"
-        mode   = " [soft]" if h1_filter_mode == "soft" else ""
+        mode   = f" [{h1_filter_mode}]" if h1_filter_mode in ("soft", "strict") else ""
         return f"H1: {icon} {h1_trend}  ({align}){mode}\n"
 
     if decision == "WATCHING":
@@ -391,7 +391,7 @@ def msg_startup(
     tokyo_start=8, tokyo_end=15, london_start=16, london_end=20,
     us_start=21, us_end=23, max_total_open=1,
     position_full_usd=48, position_partial_usd=30, session_thresholds=None,
-    tg_min_score=3, h1_filter_enabled=True, h1_filter_mode="soft",
+    tg_min_score=3, h1_filter_enabled=True, h1_filter_mode="strict",
 ) -> str:
     thr     = session_thresholds or {}
     lon_thr = thr.get("London", min_score)
@@ -492,7 +492,7 @@ def msg_daily_report(
 
 
 
-def _h1_section(h1_stats: dict | None) -> str:
+def _h1_section(h1_stats: dict | None, h1_filter_mode: str = "strict") -> str:
     """Render H1 filter aligned vs counter-trend breakdown block."""
     if not h1_stats:
         return ""
@@ -501,7 +501,7 @@ def _h1_section(h1_stats: dict | None) -> str:
     if not a and not ct:
         return ""
 
-    lines = [f"{_DIV}\nH1 Filter [soft]\n"]
+    lines = [f"{_DIV}\nH1 Filter [{h1_filter_mode}]\n"]
 
     mx = max(a.get("win_rate", 0), ct.get("win_rate", 0)) or 1
 
@@ -529,10 +529,17 @@ def _h1_section(h1_stats: dict | None) -> str:
     ct_n  = ct.get("count", 0)
     diff  = round(a_wr - ct_wr, 1)
 
-    if ct_n < 5:
+    if h1_filter_mode == "strict":
+        if ct_n == 0:
+            rec = "  → Strict mode active — all counter-trend entries blocked"
+        elif ct_n < 5:
+            rec = f"  → {ct_n} counter-trend trades slipped through — check filter"
+        else:
+            rec = f"  → {ct_n} counter-trend trades in strict mode — investigate"
+    elif ct_n < 5:
         rec = f"  → {ct_n} counter-trend trades — need more data"
     elif diff >= 20:
-        rec = f"  → Counter-trend {diff}pts lower — consider strict mode"
+        rec = f"  → Counter-trend {diff}pts lower — switch to strict mode"
     elif diff >= 10:
         rec = f"  → Counter-trend {diff}pts lower — monitor closely"
     else:
@@ -542,7 +549,7 @@ def _h1_section(h1_stats: dict | None) -> str:
     return "".join(lines)
 
 
-def msg_weekly_report(week_label, stats, sessions, setups, report_time, pairs=None, h1_stats=None) -> str:
+def msg_weekly_report(week_label, stats, sessions, setups, report_time, pairs=None, h1_stats=None, h1_filter_mode="strict") -> str:
     if stats["count"] == 0:
         return f"📅 Weekly Report — {week_label}\n{_DIV}\nNo closed trades.\nReport: {report_time}"
 
@@ -587,7 +594,7 @@ def msg_weekly_report(week_label, stats, sessions, setups, report_time, pairs=No
         f"{_DIV}\nBy Session\n{_sec(sessions)}"
         f"{_DIV}\nBy Pair\n{_sec(pairs) if pairs else ''}"
         f"{_DIV}\nBy Setup\n{_setup_sec(setups)}"
-        + _h1_section(h1_stats)
+        + _h1_section(h1_stats, h1_filter_mode=h1_filter_mode)
         + f"{_DIV}\n{verdict}\nReport: {report_time}"
     )
 
@@ -596,7 +603,7 @@ def msg_weekly_report(week_label, stats, sessions, setups, report_time, pairs=No
 
 def msg_monthly_report(month_label, stats, sessions, setups, scores,
                        mom_delta, prior_month_pnl, report_time,
-                       h1_stats=None) -> str:
+                       h1_stats=None, h1_filter_mode="strict") -> str:
     if stats["count"] == 0:
         return f"📆 Monthly Report — {month_label}\n{_DIV}\nNo closed trades.\nReport: {report_time}"
 
@@ -645,6 +652,6 @@ def msg_monthly_report(month_label, stats, sessions, setups, scores,
         f"{_DIV}\nBy Session\n{_sec(sessions)}"
         f"{_DIV}\nBy Setup\n{_sec(setups)}"
         f"{_DIV}\nBy Score\n{_sec(scores, w=8)}"
-        + _h1_section(h1_stats)
+        + _h1_section(h1_stats, h1_filter_mode=h1_filter_mode)
         + f"{_DIV}\n{verdict}\n💡 {rec}\nReport: {report_time}"
     )

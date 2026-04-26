@@ -1,8 +1,8 @@
-# Cable Scalp v1.5 — GBP/USD M5 Scalping Bot
+# Cable Scalp v1.6 — GBP/USD M5 Scalping Bot
 
 > **Deployed on Railway · OANDA API · Telegram Alerts**
 
-Cable Scalp v1.5 is a dedicated automated M5 scalping bot for **GBP/USD (Cable)** on OANDA.
+Cable Scalp v1.6 is a dedicated automated M5 scalping bot for **GBP/USD (Cable)** on OANDA.
 Single pair, clean data, focused execution.
 Strategy: EMA 9/21 crossover + Opening Range Breakout (ORB) + CPR pivot bias, scored 1–6/6.
 
@@ -24,7 +24,7 @@ Strategy: EMA 9/21 crossover + Opening Range Breakout (ORB) + CPR pivot bias, sc
 
 ## Strategy Overview
 
-Cable Scalp v1.5 runs on **M5 (5-minute) candles** with a 5-minute cycle.
+Cable Scalp v1.6 runs on **M5 (5-minute) candles** with a 5-minute cycle.
 Every cycle the signal engine evaluates three components and scores them 0–6:
 
 | Component | Points | Condition |
@@ -60,7 +60,7 @@ All times SGT (UTC+8):
 ✈️  04:00–07:59  Dead zone       No new entries (pre-Tokyo gap)
 🗼 08:00–15:59  Tokyo           score ≥ 5/6  cap 10
 🇬🇧 16:00–20:59  London          score ≥ 4/6  cap 10
-🗽 21:00–23:59  US session      score ≥ 4/6  cap 10
+🚫 21:00–23:59  US session      DISABLED (10% WR — 1W/9L live data)
 🗽 00:00–03:59  US continuation score ≥ 4/6  cap 10
 ```
 
@@ -73,8 +73,8 @@ Market closed: Saturday and Sunday.
 
 | Setting | Value | Notes |
 |---|---|---|
-| `position_full_usd` | $48 | 2.4% of $2,000 account (max margin) |
-| `position_partial_usd` | $30 | 1.5% of $2,000 account |
+| `position_full_usd` | $60 | 2.4% of $2,000 account (max margin) |
+| `position_partial_usd` | $45 | 1.5% of $2,000 account |
 | `max_total_open_trades` | 2 | Hard cap across all pairs |
 | `max_losing_trades_day` | 8 | Bot pauses until 08:00 SGT |
 | `min_trade_units` | 1,000 | Reject margin-adjusted micro-orders |
@@ -94,10 +94,10 @@ See `SETTINGS.md` for the full key reference.
 Key settings in `settings.json`:
 ```json
 {
-  "bot_name":              "Cable Scalp v1.5",
-  "position_full_usd":     48,
-  "position_partial_usd":  30,
-  "max_total_open_trades": 2,
+  "bot_name":              "Cable Scalp v1.6",
+  "position_full_usd":     60,
+  "position_partial_usd":  45,
+  "max_total_open_trades": 1,
   "max_concurrent_trades": 1,
   "min_trade_units":       1000,
   "signal_threshold":      4,
@@ -114,7 +114,7 @@ Key settings in `settings.json`:
 
 ## Railway Deployment
 
-1. Push the `Cable Scalp v1.5` folder to a GitHub repository
+1. Push the `Cable Scalp v1.6` folder to a GitHub repository
 2. Connect to Railway → New Project → Deploy from GitHub
 3. Set environment variables (see below)
 4. Add a persistent volume mounted at `/data`
@@ -137,7 +137,7 @@ Key settings in `settings.json`:
 ## File Structure
 
 ```
-Cable Scalp v1.5/
+Cable Scalp v1.6/
 ├── scheduler.py          # APScheduler — main entry point
 ├── bot.py                # Trade cycle logic
 ├── signals.py            # EMA + ORB + CPR signal engine

@@ -1,4 +1,4 @@
-# Cable Scalp v1.0 — Settings Reference
+# Cable Scalp v1.6 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v1.0` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v1.6` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -41,8 +41,8 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 | `tokyo_session_end_hour` | `15` | Tokyo close (SGT). |
 | `london_session_start_hour` | `16` | London open (SGT). |
 | `london_session_end_hour` | `20` | London close (SGT). |
-| `us_session_start_hour` | `99` | US session open. Set to `99` = disabled. |
-| `us_session_end_hour` | `99` | US session close. Set to `99` = disabled. |
+| `us_session_start_hour` | `99` | US session open. `99` = disabled. **Disabled in v1.6** (10% WR live data). |
+| `us_session_end_hour` | `99` | US session close. `99` = disabled. **Disabled in v1.6**. |
 | `us_session_early_end_hour` | `3` | US continuation close hour (SGT). `3` = window is 00:00–03:59. Set to `-1` to disable. |
 | `dead_zone_start_hour` | `4` | Dead zone start (SGT) — no new entries. |
 | `dead_zone_end_hour` | `7` | Dead zone end (SGT). |
@@ -145,7 +145,7 @@ GBP/USD SL/TP summary:
 | Key | Default | Description |
 |---|---|---|
 | `h1_filter_enabled` | `true` | Fetch H1 EMA21 and classify trades as aligned/counter-trend. |
-| `h1_filter_mode` | `soft` | `soft` = label only. `strict` = block counter-trend entries. |
+| `h1_filter_mode` | `strict` | `soft` = label only. `strict` = block counter-trend entries. **Set to strict in v1.6** — live data showed 73% counter-trend trades losing. |
 | `h1_ema_period` | `21` | H1 EMA period. |
 
 ---

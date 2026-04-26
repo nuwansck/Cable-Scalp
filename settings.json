@@ -1,5 +1,5 @@
 {
-  "bot_name": "Cable Scalp v1.5",
+  "bot_name": "Cable Scalp v1.6",
   "demo_mode": true,
   "enabled": true,
   "_comment_pairs": "Per-pair settings override any matching global key for that pair's cycle.",
@@ -31,7 +31,7 @@
   "max_trades_day": 20,
   "max_losing_trades_day": 8,
   "max_trades_london": 10,
-  "max_trades_us": 10,
+  "max_trades_us": 0,
   "max_losing_trades_session": 4,
   "loss_streak_cooldown_min": 30,
   "sl_reentry_gap_min": 10,
@@ -44,7 +44,7 @@
   "session_only": true,
   "session_thresholds": {
     "London": 4,
-    "US": 4,
+    "US": 99,
     "Tokyo": 5
   },
   "news_filter_enabled": true,
@@ -76,8 +76,8 @@
   "calendar_fetch_interval_min": 60,
   "london_session_start_hour": 16,
   "london_session_end_hour": 20,
-  "us_session_start_hour": 21,
-  "us_session_end_hour": 23,
+  "us_session_start_hour": 99,
+  "us_session_end_hour": 99,
   "us_session_early_end_hour": 3,
   "dead_zone_start_hour": 4,
   "dead_zone_end_hour": 7,
@@ -103,7 +103,7 @@
   "min_trade_units": 1000,
   "telegram_min_score_alert": 3,
   "h1_filter_enabled": true,
-  "h1_filter_mode": "soft",
+  "h1_filter_mode": "strict",
   "h1_ema_period": 21,
   "be_trigger_pips": 20
 }

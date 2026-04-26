@@ -1,6 +1,6 @@
-# Cable Scalp v1.5 — Technical Specification & Operations Wiki
+# Cable Scalp v1.6 — Technical Specification & Operations Wiki
 
-**Bot name:** Cable Scalp v1.5
+**Bot name:** Cable Scalp v1.6
 **Instrument:** GBP/USD (Cable) only
 **Exchange:** OANDA (practice & live)
 **Deployment:** Railway (PaaS)
@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Scope
 
-Cable Scalp v1.5 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+Cable Scalp v1.6 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
 It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
 with minimum score thresholds per session. All configuration lives in `settings.json`.
 
@@ -70,7 +70,7 @@ All times SGT (UTC+8):
 | Dead zone | 04:00–07:59 | No trading | — |
 | Tokyo | 08:00–15:59 | ≥ 5/6 | 10 |
 | London | 16:00–20:59 | ≥ 4/6 | 10 |
-| US session      | 21:00–23:59 | ≥ 4/6          | 10        |
+| US session | 21:00–23:59 | **DISABLED** | — |
 | US continuation | 00:00–03:59 | ≥ 4/6 | 10 |
 
 Market fully closed Saturday and Sunday. Monday opens at 08:00 SGT.

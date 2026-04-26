@@ -2,6 +2,60 @@
 
 ---
 
+## v1.6.0 — 2026-04-26
+
+### US session disabled — confirmed by live data
+
+**Decision basis:** 42 live trades (Apr 1–26, 2026) across all three data sources
+(OANDA transaction CSV + Railway container logs + Telegram message history).
+
+US session (21:00–23:59 SGT) performance:
+- Record: 1W / 9L — **10% win rate**
+- Net P&L: **-$185**
+- Break-even WR required: 37.5%
+- Gap below break-even: **27.5 points**
+- Sample: 10 trades — statistically conclusive
+
+`us_session_start_hour` and `us_session_end_hour` set to `99` (sentinel disabled).
+`session_thresholds.US` set to `99`. `max_trades_us` set to `0`.
+US continuation (00:00–03:59 SGT) remains **enabled** (78% WR, 7W/2L, +$229).
+
+### H1 filter — upgraded from soft to strict
+
+**Decision basis:** Log and Telegram analysis confirmed 73% of recent trades
+were counter-trend (11/15 over Apr 20–24). Counter-trend trades caused the
+Apr 22–24 losing streak (-$344 in 3 days):
+
+| Date | Trade | H1 | Result |
+|---|---|---|---|
+| Apr 20 20:23 | SELL London | BULLISH ⚠️ | SL -$35 |
+| Apr 21 20:58 | SELL London | BULLISH ⚠️ | SL -$36 |
+| Apr 22 09:23 | SELL Tokyo | BULLISH ⚠️ | SL -$35 |
+| Apr 22 18:08 | SELL London | BULLISH ⚠️ | SL -$34 |
+| Apr 23 16:43 | BUY London | BEARISH ⚠️ | SL -$34 |
+| Apr 23 19:58 | BUY London | BEARISH ⚠️ | SL -$36 |
+| Apr 24 20:58 | SELL London | BULLISH ⚠️ | SL -$33 |
+
+`h1_filter_mode` changed from `soft` → `strict`.
+In strict mode counter-trend entries are **blocked** before execution — no alert,
+no order. Estimated savings: ~$243 over the Apr 22–24 period alone.
+
+### Active sessions after v1.6
+
+| Window | SGT | Threshold |
+|---|---|---|
+| Dead zone | 04:00–07:59 | No trading |
+| Tokyo | 08:00–15:59 | ≥ 5/6 |
+| London | 16:00–20:59 | ≥ 4/6 |
+| US session | 21:00–23:59 | **Disabled** |
+| US continuation | 00:00–03:59 | ≥ 4/6 |
+
+### Files changed
+`settings.json`, `version.py`, `README.md`, `SETTINGS.md`,
+`CONFLUENCE_READY.md`, `CHANGELOG.md`
+
+---
+
 ## v1.0.0 — 2026-04-12
 
 Initial release of **Cable Scalp v1.0** — dedicated GBP/USD (Cable) M5 scalping bot.
