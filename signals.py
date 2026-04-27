@@ -23,7 +23,7 @@ Key per-pair settings used here: pair_sl_tp (sl_pips, tp_pips, pip_value_usd).
 
 ORB cache key includes instrument so each pair has its own ORB per session.
 
-v1.0: GBP/USD only. pip_value_usd is static $10.00 (standard for USD-quoted pairs).
+v1.9: GBP/USD only. pip_value_usd is static $10.00 (standard for USD-quoted pairs).
 GBP/USD uses static $10.00/pip (standard for USD-quoted pairs).
 """
 
@@ -111,7 +111,7 @@ def _price_dp(pip_size: float) -> int:
     if pip_size <= 0.0001:
         return 5   # GBP_USD (e.g. 1.27345) — Cable
     if pip_size <= 0.01:
-        return 3   # JPY pairs (not used in Cable Scalp v1.0)
+        return 3   # JPY pairs (not used in Cable Scalp v1.9)
     return 2       # fallback
 
 
@@ -130,10 +130,10 @@ class SignalEngine:
         self.session = make_oanda_session(allowed_methods=["GET"])
 
     def analyze(self, instrument: str = "GBP_USD", settings: dict | None = None):
-        """Run the RF Scalp EMA + ORB (time-decayed) + CPR-bias scoring engine.
+        """Run the Cable Scalp EMA + ORB (time-decayed) + CPR-bias scoring engine.
 
         Args:
-            instrument: OANDA instrument code (GBP_USD for Cable Scalp v1.0)
+            instrument: OANDA instrument code (GBP_USD for Cable Scalp v1.9)
             settings:   merged (global + pair-specific) settings dict
 
         Returns:
@@ -547,7 +547,7 @@ class SignalEngine:
                            pair_cfg: dict) -> float:
         """Return pip_value_usd. GBP/USD = static $10.00 per pip per 100k units.
 
-        JPY dynamic logic removed in v1.0 — Cable Scalp is GBP/USD only.
+        JPY dynamic logic removed in v1.9 — Cable Scalp is GBP/USD only.
         """
         return float(pair_cfg.get("pip_value_usd", 10.0))
 

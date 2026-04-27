@@ -132,7 +132,7 @@ def _pip_size(settings: dict) -> float:
 def _pip_dp(pip: float) -> int:
     """Decimal places for price rounding given pip size."""
     if pip <= 0.0001: return 5   # GBP_USD (Cable)
-    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v1.0)
+    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v1.9)
     return 2
 
 
@@ -244,9 +244,9 @@ def validate_settings(settings: dict) -> dict:
     # session window hours
     settings.setdefault("london_session_start_hour",  16)
     settings.setdefault("london_session_end_hour",    20)
-    settings.setdefault("us_session_start_hour",      99)  # v1.0: US 21-23 disabled (0% WR)
-    settings.setdefault("us_session_end_hour",        99)  # v1.0: US 21-23 disabled
-    settings.setdefault("us_session_early_end_hour",   3)  # v1.0: US cont 00-03 re-enabled
+    settings.setdefault("us_session_start_hour",      99)  # v1.9: US 21-23 disabled (0% WR)
+    settings.setdefault("us_session_end_hour",        99)  # v1.9: US 21-23 disabled
+    settings.setdefault("us_session_early_end_hour",   3)  # v1.9: US cont 00-03 re-enabled
     settings.setdefault("dead_zone_start_hour",        4)   # 04:00 SGT — pre-Tokyo gap
     settings.setdefault("dead_zone_end_hour",           7)   # 07:59 SGT end
     # report schedule times (SGT)
@@ -1343,7 +1343,7 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
     _tg_min_score = int(settings.get("telegram_min_score_alert", 3))
     if direction == "NONE" or position_usd <= 0:
         _sig_action = "WATCHED" if score >= int(settings.get("signal_log_min_score", 3)) else "NOISE"
-        log_signal(score, direction, session_name, levels, _sig_action, settings=settings)
+        log_signal(score, direction, macro, levels, _sig_action, settings=settings)
         if score >= _tg_min_score or _tg_min_score == 0:
             _send_signal_update("WATCHING", _clean_reason(details),
                                 {"session_ok": True, "news_ok": True,
@@ -1412,12 +1412,12 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
         db.finish_cycle(run_id, status="SKIPPED",
                         summary={"stage": "h1_filter", "reason": _h1_reason,
                                  "instrument": instrument})
-        log_signal(score, direction, session_name, levels, "BLOCKED_H1",
+        log_signal(score, direction, macro, levels, "BLOCKED_H1",
                    block_reason=_h1_reason, settings=settings)
         return None
 
     if signal_blockers:
-        log_signal(score, direction, session_name, levels, "BLOCKED_RR",
+        log_signal(score, direction, macro, levels, "BLOCKED_RR",
                    block_reason=signal_blockers[0], settings=settings)
         _send_signal_update("BLOCKED", signal_blockers[0],
                             {"rr_ratio": rr_ratio, "tp_pct": tp_pct,
@@ -1523,7 +1523,7 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
             alert, ops, "spread_state", f"spread:{macro}:{spread_pips}",
             msg_spread_skip(banner, session, spread_pips, spread_limit),
             instrument)
-        log_signal(score, direction, session_name, levels, "BLOCKED_SPREAD",
+        log_signal(score, direction, macro, levels, "BLOCKED_SPREAD",
                    block_reason=f"Spread {spread_pips}p > {spread_limit}p",
                    settings=settings)
         db.finish_cycle(run_id, status="SKIPPED",
@@ -1722,7 +1722,7 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
             price_dp=dp,
             tp2_rr=float(settings.get("tp2_rr_reference", 3.0)),
         ))
-        log_signal(score, direction, session_name, levels, "FIRED",
+        log_signal(score, direction, macro, levels, "FIRED",
                    trade_id=str(record.get("trade_id", "")), settings=settings)
         log.info("[%s] Trade placed: %s", instrument, record,
                  extra={"run_id": run_id})
