@@ -676,7 +676,7 @@ def send_monthly_csv_export() -> None:
         period = f"{months[0]} → {months[-1]}" if months else _V16_START
 
         caption = (
-            f"📊 Cable Scalp v1.6 — Cumulative Trade Log\n"
+            f"📊 Cable Scalp v1.9 — Cumulative Trade Log\n"
             f"Period: {period}\n"
             f"Trades: {len(trades)}  ({wins}W / {losses}L)  WR {wr}%\n"
             f"Net P&L: ${net_pnl:+.2f}\n"

@@ -35,7 +35,7 @@ class TelegramAlert:
             log.warning("Telegram not configured.")
             return False
 
-        _bot_name = load_settings().get("bot_name", "RF Scalp")
+        _bot_name = load_settings().get("bot_name", "Cable Scalp v1.9")
         url  = f"https://api.telegram.org/bot{self.token}/sendMessage"
         text = f"\U0001f916 {_bot_name}\n{chr(0x2500) * 22}\n{message}"
 

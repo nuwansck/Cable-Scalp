@@ -1,4 +1,4 @@
-"""Signal engine for EMA crossover + ORB scalping — Cable Scalp v1.0
+"""Signal engine for EMA crossover + ORB scalping — Cable Scalp v1.9
 
 Dedicated to GBP/USD (Cable).
 instrument is passed explicitly to analyze(); no pair is hard-coded.

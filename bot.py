@@ -1,4 +1,4 @@
-"""Main orchestrator for Cable Scalp v1.0 — GBP/USD M5 Scalper
+"""Main orchestrator for Cable Scalp v1.9 — GBP/USD M5 Scalper
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
@@ -36,6 +36,7 @@ from logging_utils import configure_logging, get_logger
 from news_filter import NewsFilter
 from oanda_trader import OandaTrader
 from signals import SignalEngine, score_to_position_usd
+from signal_logger import log_signal, backfill_outcome, get_signal_log_path
 from startup_checks import run_startup_checks
 from state_utils import (
     RUNTIME_STATE_FILE, SCORE_CACHE_FILE, OPS_STATE_FILE, TRADE_HISTORY_FILE,
@@ -193,7 +194,7 @@ def _signal_payload(**kwargs):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def validate_settings(settings: dict) -> dict:
-    required = ["pairs"]  # Cable Scalp v1.0: pair_sl_tp fixed pips used exclusively
+    required = ["pairs"]  # Cable Scalp v1.9: pair_sl_tp fixed pips used exclusively
     missing  = [k for k in required if k not in settings]
     if missing:
         raise ValueError(f"Missing required settings keys: {missing}")
@@ -667,7 +668,7 @@ def send_once_per_state(alert, cache: dict, key: str, value: str,
 def check_breakeven(history: list, trader, alert, settings: dict, instrument: str):
     """Move SL to break-even when trade profit reaches be_trigger_pips.
 
-    v1.0: trigger derived from per-pair be_trigger_pips (a pip count) converted
+    v1.9: trigger derived from per-pair be_trigger_pips (a pip count) converted
     to a price distance using pip_size.  Replaces the old breakeven_trigger_usd
     which was a quote-currency price offset — correct for USD pairs but almost
     zero for JPY pairs (0.002 yen ≈ 0.2 pips), making breakeven fire at entry.
@@ -1416,6 +1417,8 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
         return None
 
     if signal_blockers:
+        log_signal(score, direction, session_name, levels, "BLOCKED_RR",
+                   block_reason=signal_blockers[0], settings=settings)
         _send_signal_update("BLOCKED", signal_blockers[0],
                             {"rr_ratio": rr_ratio, "tp_pct": tp_pct,
                              "session_ok": True, "news_ok": True,
@@ -1520,6 +1523,9 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
             alert, ops, "spread_state", f"spread:{macro}:{spread_pips}",
             msg_spread_skip(banner, session, spread_pips, spread_limit),
             instrument)
+        log_signal(score, direction, session_name, levels, "BLOCKED_SPREAD",
+                   block_reason=f"Spread {spread_pips}p > {spread_limit}p",
+                   settings=settings)
         db.finish_cycle(run_id, status="SKIPPED",
                         summary={"stage": "spread_guard", "instrument": instrument})
         update_runtime_state(last_cycle_finished=now_sgt.strftime("%Y-%m-%d %H:%M:%S"),

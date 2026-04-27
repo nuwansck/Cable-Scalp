@@ -145,7 +145,7 @@ def main():
     # Avoids re-reading secrets + creating new HTTP sessions every 5 minutes.
     _alert = TelegramAlert()
 
-    logger.info('%s — Scheduler starting', settings.get('bot_name', 'Cable Scalp v1.0'))
+    logger.info('%s — Scheduler starting', settings.get('bot_name', 'Cable Scalp v1.9'))
     logger.info('DATA_DIR : %s', DATA_DIR)
     logger.info('Python   : %s', sys.version.split()[0])
     for warning in run_startup_checks():
@@ -207,7 +207,7 @@ def main():
         coalesce=True,
     )
 
-    # Monthly CSV export: last day of month at 08:30 SGT — cumulative v1.6 trade log
+    # Monthly CSV export: last day of month at 08:30 SGT — cumulative v1.9 trade log
     scheduler.add_job(
         send_monthly_csv_export,
         CronTrigger(day='last', hour=8, minute=30, timezone=SG_TZ),
@@ -278,7 +278,7 @@ def main():
         _balance = _summary["balance"] if _summary else 0.0
         _threshold = int(settings.get('signal_threshold', 4))
         _mode    = 'DEMO' if settings.get('demo_mode', True) else 'LIVE'
-        _version = settings.get('bot_name', 'Cable Scalp v1.0')
+        _version = settings.get('bot_name', 'Cable Scalp v1.9')
 
         # ── Startup message deduplication ──────────────────────────────────
         # Suppress duplicate startup alerts when Railway restarts the container
