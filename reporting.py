@@ -1,4 +1,4 @@
-"""reporting.py — Cable Scalp v1.7 Telegram Performance Reports
+"""reporting.py — Cable Scalp v1.8 Telegram Performance Reports
 
 Three scheduled reports, all reading directly from /data/trade_history.json
 on the Railway persistent volume. No archive file needed — the 90-day rolling

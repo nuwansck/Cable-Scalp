@@ -2,6 +2,29 @@
 
 ---
 
+## v1.8.0 — 2026-04-27
+
+### Score 3 Telegram alerts suppressed — reduced message flooding
+
+**Problem:** Tokyo session was generating score 3/6 WATCHING alerts every
+5 minutes — same signal repeating with aging ORB (102, 107, 112, 117 min).
+These alerts never resulted in trades (Tokyo threshold is 5/6, London/US
+cont is 4/6) and flooded the Telegram chat with noise.
+
+**Fix:** `telegram_min_score_alert` raised from `3` → `4`.
+
+**Impact:**
+- Score 3 WATCHING alerts → silently suppressed ✅
+- Score 4 WATCHING alerts → still shown (London/US cont threshold) ✅
+- Score 5+ WATCHING alerts → still shown (Tokyo threshold) ✅
+- All trade open/close/blocked alerts → unchanged ✅
+
+**Files changed:** `settings.json`, `version.py`, `bot.py`,
+`telegram_templates.py`, `telegram_alert.py`, `README.md`,
+`SETTINGS.md`, `CONFLUENCE_READY.md`, `reporting.py`
+
+---
+
 ## v1.7.0 — 2026-04-27
 
 ### Cumulative monthly CSV export via Telegram

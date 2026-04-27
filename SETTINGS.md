@@ -1,4 +1,4 @@
-# Cable Scalp v1.7 — Settings Reference
+# Cable Scalp v1.8 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v1.7` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v1.8` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -29,7 +29,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 | `exhaustion_atr_mult` | `3.0` | Price > this × ATR from EMA midpoint = −1 penalty. Skipped during ORB breakout. |
 | `m5_candle_count` | `40` | Number of M5 candles fetched per cycle. |
 | `atr_period` | `14` | ATR calculation period. |
-| `telegram_min_score_alert` | `3` | WATCHING cards below this score are silently suppressed. |
+| `telegram_min_score_alert` | `4` | WATCHING cards below this score are silently suppressed. Set to 4 in v1.8 — score 3 alerts removed (never trade, just noise). London/US cont threshold is 4, Tokyo is 5. |
 
 ---
 

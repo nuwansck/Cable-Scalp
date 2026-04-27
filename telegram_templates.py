@@ -1,4 +1,4 @@
-"""Telegram message templates for Cable Scalp v1.7
+"""Telegram message templates for Cable Scalp v1.8
 AtomicFX-style: clean, state-change only, minimal noise.
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ def _split_banner(banner: str) -> tuple[str, str]:
     """Extract pair from banner.
     Handles both:
       '🇬🇧 LONDON [GBP/USD]'  → ('🇬🇧 LONDON [GBP/USD]', 'GBP/USD')
-      'Cable Scalp v1.7 | GBP/USD' → ('Cable Scalp v1.7', 'GBP/USD')
+      'Cable Scalp v1.8 | GBP/USD' → ('Cable Scalp v1.8', 'GBP/USD')
     """
     if "[" in banner and "]" in banner:
         pair = banner[banner.index("[")+1 : banner.index("]")]
@@ -391,7 +391,7 @@ def msg_startup(
     tokyo_start=8, tokyo_end=15, london_start=16, london_end=20,
     us_start=21, us_end=23, max_total_open=1,
     position_full_usd=48, position_partial_usd=30, session_thresholds=None,
-    tg_min_score=3, h1_filter_enabled=True, h1_filter_mode="strict",
+    tg_min_score=4, h1_filter_enabled=True, h1_filter_mode="strict",
 ) -> str:
     thr     = session_thresholds or {}
     lon_thr = thr.get("London", min_score)

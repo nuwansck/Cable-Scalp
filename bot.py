@@ -216,7 +216,7 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("auto_scale_on_margin_reject",True)
     settings.setdefault("telegram_show_margin",       True)
     # Suppress WATCHING alerts for signals below this score (0 = send all)
-    settings.setdefault("telegram_min_score_alert",   3)
+    settings.setdefault("telegram_min_score_alert",   4)
     settings.setdefault("friday_cutoff_hour_sgt",     23)
     settings.setdefault("friday_cutoff_minute_sgt",   0)
     settings.setdefault("news_lookahead_min",         120)
