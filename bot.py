@@ -217,6 +217,8 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("telegram_show_margin",       True)
     # Suppress WATCHING alerts for signals below this score (0 = send all)
     settings.setdefault("telegram_min_score_alert",   4)
+    settings.setdefault("signal_logging_enabled",     False)
+    settings.setdefault("signal_log_min_score",        3)
     settings.setdefault("friday_cutoff_hour_sgt",     23)
     settings.setdefault("friday_cutoff_minute_sgt",   0)
     settings.setdefault("news_lookahead_min",         120)
@@ -1339,6 +1341,8 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
 
     _tg_min_score = int(settings.get("telegram_min_score_alert", 3))
     if direction == "NONE" or position_usd <= 0:
+        _sig_action = "WATCHED" if score >= int(settings.get("signal_log_min_score", 3)) else "NOISE"
+        log_signal(score, direction, session_name, levels, _sig_action, settings=settings)
         if score >= _tg_min_score or _tg_min_score == 0:
             _send_signal_update("WATCHING", _clean_reason(details),
                                 {"session_ok": True, "news_ok": True,
@@ -1407,6 +1411,8 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
         db.finish_cycle(run_id, status="SKIPPED",
                         summary={"stage": "h1_filter", "reason": _h1_reason,
                                  "instrument": instrument})
+        log_signal(score, direction, session_name, levels, "BLOCKED_H1",
+                   block_reason=_h1_reason, settings=settings)
         return None
 
     if signal_blockers:
@@ -1710,6 +1716,8 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
             price_dp=dp,
             tp2_rr=float(settings.get("tp2_rr_reference", 3.0)),
         ))
+        log_signal(score, direction, session_name, levels, "FIRED",
+                   trade_id=str(record.get("trade_id", "")), settings=settings)
         log.info("[%s] Trade placed: %s", instrument, record,
                  extra={"run_id": run_id})
 

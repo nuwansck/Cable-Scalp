@@ -1,6 +1,6 @@
-# Cable Scalp v1.8 — Technical Specification & Operations Wiki
+# Cable Scalp v1.9 — Technical Specification & Operations Wiki
 
-**Bot name:** Cable Scalp v1.8
+**Bot name:** Cable Scalp v1.9
 **Instrument:** GBP/USD (Cable) only
 **Exchange:** OANDA (practice & live)
 **Deployment:** Railway (PaaS)
@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Scope
 
-Cable Scalp v1.8 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+Cable Scalp v1.9 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
 It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
 with minimum score thresholds per session. All configuration lives in `settings.json`.
 
@@ -133,6 +133,16 @@ materially lower win rate.
 
 All message cards defined in `telegram_templates.py`.
 WATCHING cards for score < `telegram_min_score_alert` (default 4) are suppressed. Score 3 alerts never resulted in trades and caused message flooding — silenced in v1.8.
+
+### Signal logging (v1.9)
+
+Every signal evaluation (score ≥ `signal_log_min_score`, default 3) can be logged to `/data/signal_log.csv` for future AI/ML training data. Disabled by default — enable via `signal_logging_enabled: true` in settings.json.
+
+**CSV columns:** `timestamp_sgt, day_of_week, session, hour_sgt, direction, score, ema_pts, orb_pts, cpr_pts, setup, h1_trend, h1_aligned, orb_age_min, orb_formed, cpr_width_pct, atr, spread_pips, action, block_reason, outcome, pl_usd, trade_id`
+
+**Actions captured:** FIRED · WATCHED · BLOCKED_H1 · BLOCKED_NEWS · BLOCKED_SPREAD · BLOCKED_RR · NOISE
+
+**Export:** Sent automatically to Telegram on last day of month at 08:35 SGT (5 min after trade CSV). Only exports when logging is enabled. Score 3 alerts never resulted in trades and caused message flooding — silenced in v1.8.
 Score 1–2 = noise; score 3+ sends.
 
 ### Report schedule

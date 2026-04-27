@@ -2,6 +2,42 @@
 
 ---
 
+## v1.9.0 — 2026-04-27
+
+### Signal logging for AI/ML data collection
+
+Added opt-in signal logging that captures every signal evaluation
+(score ≥ `signal_log_min_score`, default 3) to `/data/signal_log.csv`.
+
+**Disabled by default** — zero impact unless enabled:
+```json
+"signal_logging_enabled": true,
+"signal_log_min_score":   3
+```
+
+**What gets captured per row:**
+- Timestamp, session, direction, score
+- Feature breakdown: ema_pts, orb_pts, cpr_pts
+- Setup name, H1 trend, H1 aligned
+- ORB age, CPR width, ATR, spread
+- Action: FIRED / WATCHED / BLOCKED_H1 / BLOCKED_SPREAD / BLOCKED_RR / NOISE
+- Block reason (when applicable)
+- Outcome: TP / SL / BE (back-filled automatically when trade closes)
+- Trade ID (links to trade_history.json)
+
+**Monthly export:** Last day of month at 08:35 SGT — 5 min after trade CSV.
+Only fires when `signal_logging_enabled = true`.
+
+**Purpose:** Build cumulative AI training dataset. After 6 months (~1,800 rows)
+a confidence scoring model can be trained to filter low-quality signals and
+improve dynamic position sizing.
+
+**Files changed:** `signal_logger.py` (new), `bot.py`, `reporting.py`,
+`scheduler.py`, `settings.json`, `version.py`, `telegram_templates.py`,
+`telegram_alert.py`, `README.md`, `SETTINGS.md`, `CONFLUENCE_READY.md`
+
+---
+
 ## v1.8.0 — 2026-04-27
 
 ### Score 3 Telegram alerts suppressed — reduced message flooding

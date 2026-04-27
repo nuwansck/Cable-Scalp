@@ -13,7 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from bot import run_bot_cycle
 from oanda_trader import OandaTrader
-from reporting import send_daily_report, send_weekly_report, send_monthly_report, send_weekly_export, send_monthly_csv_export
+from reporting import send_daily_report, send_weekly_report, send_monthly_report, send_weekly_export, send_monthly_csv_export, send_monthly_signal_export
 from telegram_alert import TelegramAlert
 from telegram_templates import msg_startup
 from config_loader import DATA_DIR, load_settings
@@ -213,6 +213,17 @@ def main():
         CronTrigger(day='last', hour=8, minute=30, timezone=SG_TZ),
         id='monthly_csv_export',
         name='Monthly cumulative CSV export',
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # Monthly signal log export: last day of month at 08:35 SGT
+    # Only sends if signal_logging_enabled = true in settings.json
+    scheduler.add_job(
+        send_monthly_signal_export,
+        CronTrigger(day='last', hour=8, minute=35, timezone=SG_TZ),
+        id='monthly_signal_export',
+        name='Monthly signal log CSV export',
         max_instances=1,
         coalesce=True,
     )

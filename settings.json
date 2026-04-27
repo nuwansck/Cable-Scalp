@@ -1,5 +1,5 @@
 {
-  "bot_name": "Cable Scalp v1.8",
+  "bot_name": "Cable Scalp v1.9",
   "demo_mode": true,
   "enabled": true,
   "_comment_pairs": "Per-pair settings override any matching global key for that pair's cycle.",
@@ -105,5 +105,7 @@
   "h1_filter_enabled": true,
   "h1_filter_mode": "strict",
   "h1_ema_period": 21,
-  "be_trigger_pips": 20
+  "be_trigger_pips": 20,
+  "signal_logging_enabled": false,
+  "signal_log_min_score": 3
 }

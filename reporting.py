@@ -1,4 +1,4 @@
-"""reporting.py — Cable Scalp v1.8 Telegram Performance Reports
+"""reporting.py — Cable Scalp v1.9 Telegram Performance Reports
 
 Three scheduled reports, all reading directly from /data/trade_history.json
 on the Railway persistent volume. No archive file needed — the 90-day rolling
@@ -720,3 +720,73 @@ def send_monthly_csv_export() -> None:
 
     except Exception as exc:
         log.exception("send_monthly_csv_export error: %s", exc)
+
+
+def send_monthly_signal_export() -> None:
+    """Send signal_log.csv as Telegram file on last day of month at 08:35 SGT.
+
+    Only fires if signal_logging_enabled = true and signal_log.csv exists.
+    Sent 5 minutes after the trade CSV export (08:30 SGT).
+    """
+    try:
+        from config_loader import load_settings
+        import requests
+
+        settings = load_settings()
+        if not settings.get("signal_logging_enabled", False):
+            log.info("send_monthly_signal_export: signal logging disabled — skipping.")
+            return
+
+        from signal_logger import get_signal_log_path
+        sig_path = get_signal_log_path()
+
+        if not sig_path.exists() or sig_path.stat().st_size == 0:
+            log.warning("send_monthly_signal_export: signal_log.csv not found or empty.")
+            TelegramAlert().send("📎 Monthly Signal Export: no signal log found.")
+            return
+
+        now = datetime.now(SGT)
+
+        # Count rows
+        import csv as _csv
+        total_rows = 0
+        fired = watched = blocked = 0
+        with open(sig_path, "r", newline="", encoding="utf-8") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                total_rows += 1
+                action = row.get("action", "")
+                if action == "FIRED":      fired   += 1
+                elif action == "WATCHED":  watched += 1
+                elif action.startswith("BLOCKED"): blocked += 1
+
+        filename = f"cable_scalp_v19_signals_to_{now.strftime('%Y-%m-%d')}.csv"
+        caption = (
+            f"📡 Cable Scalp v1.9 — Signal Log\n"
+            f"Period: 2026-04-26 → {now.strftime('%d %b %Y')}\n"
+            f"Rows: {total_rows}  |  Fired: {fired}  |  Watched: {watched}  |  Blocked: {blocked}\n"
+            f"Generated: {now.strftime('%d %b %Y %H:%M SGT')}"
+        )
+
+        from config_loader import load_secrets
+        secrets = load_secrets()
+        token   = secrets.get("TELEGRAM_TOKEN", "")
+        chat_id = secrets.get("TELEGRAM_CHAT_ID", "")
+        url     = f"https://api.telegram.org/bot{token}/sendDocument"
+
+        with open(sig_path, "rb") as fh:
+            r = requests.post(
+                url,
+                data={"chat_id": chat_id, "caption": caption},
+                files={"document": (filename, fh, "text/csv")},
+                timeout=30,
+            )
+
+        if r.status_code == 200:
+            log.info("Monthly signal export sent: %d rows", total_rows)
+        else:
+            log.warning("Monthly signal export failed: HTTP %s: %s",
+                        r.status_code, r.text[:200])
+
+    except Exception as exc:
+        log.exception("send_monthly_signal_export error: %s", exc)
