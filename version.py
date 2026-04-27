@@ -1,2 +1,2 @@
-VERSION     = "1.6.0"
-DESCRIPTION = "Cable Scalp v1.6 — $2.00/$1.60 per pip sizing, max_total_open=1, H1 filter in weekly/monthly reports"
+VERSION     = "1.7.0"
+DESCRIPTION = "Cable Scalp v1.7 — $2.00/$1.70 per pip sizing, max_total_open=1, H1 filter in weekly/monthly reports"

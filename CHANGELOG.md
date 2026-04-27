@@ -2,6 +2,31 @@
 
 ---
 
+## v1.7.0 — 2026-04-27
+
+### Cumulative monthly CSV export via Telegram
+
+Added automated cumulative CSV export sent on the last day of every month
+at 08:30 SGT. The CSV covers all trades from v1.6 start date (2026-04-26)
+forward and grows each month — April only → April+May → April+May+June etc.
+
+**Files changed:** `reporting.py`, `scheduler.py`, `bot.py`
+
+**CSV columns:**
+`date_sgt, time_sgt, day_of_week, session, direction, score, setup,
+entry_price, sl_price, tp_price, result, pl_usd, balance,
+h1_trend, h1_aligned, ema_pts, orb_pts, cpr_pts,
+duration_min, spread_pips, units, position_usd`
+
+**Schedule:** Last day of month · 08:30 SGT
+(30 min after weekly trade history export at 08:20 SGT)
+
+**Purpose:** Build cumulative dataset for future AI/ML analysis.
+Each monthly CSV is a complete v1.6+ trade log — open directly in
+Excel or Google Sheets from Telegram.
+
+---
+
 ## v1.6.0 — 2026-04-26
 
 ### US session disabled — confirmed by live data

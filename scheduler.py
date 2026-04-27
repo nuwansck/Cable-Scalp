@@ -13,7 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from bot import run_bot_cycle
 from oanda_trader import OandaTrader
-from reporting import send_daily_report, send_weekly_report, send_monthly_report, send_weekly_export
+from reporting import send_daily_report, send_weekly_report, send_monthly_report, send_weekly_export, send_monthly_csv_export
 from telegram_alert import TelegramAlert
 from telegram_templates import msg_startup
 from config_loader import DATA_DIR, load_settings
@@ -203,6 +203,16 @@ def main():
                     minute=weekly_report_minute + 5, timezone=SG_TZ),
         id='weekly_export',
         name='Weekly trade history export',
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # Monthly CSV export: last day of month at 08:30 SGT — cumulative v1.6 trade log
+    scheduler.add_job(
+        send_monthly_csv_export,
+        CronTrigger(day='last', hour=8, minute=30, timezone=SG_TZ),
+        id='monthly_csv_export',
+        name='Monthly cumulative CSV export',
         max_instances=1,
         coalesce=True,
     )

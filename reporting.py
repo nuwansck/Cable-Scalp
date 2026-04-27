@@ -1,4 +1,4 @@
-"""reporting.py — RF Scalp Bot Telegram Performance Reports
+"""reporting.py — Cable Scalp v1.7 Telegram Performance Reports
 
 Three scheduled reports, all reading directly from /data/trade_history.json
 on the Railway persistent volume. No archive file needed — the 90-day rolling
@@ -547,3 +547,176 @@ def send_monthly_report() -> None:
             log.warning("Monthly report send failed.")
     except Exception as exc:
         log.exception("send_monthly_report error: %s", exc)
+
+
+# ── Cumulative monthly CSV export ──────────────────────────────────────────────
+
+# v1.6 start date — cumulative CSV always covers from this date forward
+_V16_START = "2026-04-26"
+
+def send_monthly_csv_export() -> None:
+    """Send cumulative CSV of all v1.6 trades on the last day of each month at 08:30 SGT.
+
+    The CSV grows every month:
+      Apr 30  → April trades only
+      May 31  → April + May trades
+      Jun 30  → April + May + June trades
+      ...
+
+    All trades from v1.6 start date (2026-04-26) to today are included.
+    File is sent via Telegram sendDocument and deleted after sending.
+    """
+    import csv
+    import io
+    import os
+    import tempfile
+    from pathlib import Path
+
+    try:
+        now    = datetime.now(SGT)
+        filled = _filled(_load_history())
+
+        # Filter from v1.6 start date to now
+        v16_start = SGT.localize(datetime.strptime(_V16_START, "%Y-%m-%d"))
+        trades = _trades_in_window(filled, v16_start, now)
+
+        if not trades:
+            TelegramAlert().send(
+                f"📎 Monthly CSV Export — {now.strftime('%b %Y')}\n"
+                f"No trades found since {_V16_START}."
+            )
+            log.warning("send_monthly_csv_export: no trades found since %s", _V16_START)
+            return
+
+        # Build CSV in memory
+        fieldnames = [
+            "date_sgt", "time_sgt", "day_of_week",
+            "session", "direction", "score", "setup",
+            "entry_price", "sl_price", "tp_price",
+            "result", "pl_usd", "balance",
+            "h1_trend", "h1_aligned",
+            "ema_pts", "orb_pts", "cpr_pts",
+            "duration_min", "spread_pips",
+            "units", "position_usd",
+        ]
+
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+
+        for t in sorted(trades, key=lambda x: x.get("timestamp_sgt", "")):
+            ts = t.get("timestamp_sgt", "")
+            try:
+                dt_obj = datetime.strptime(ts[:19], "%Y-%m-%d %H:%M:%S")
+                date_str = dt_obj.strftime("%Y-%m-%d")
+                time_str = dt_obj.strftime("%H:%M")
+                dow_str  = dt_obj.strftime("%A")
+            except Exception:
+                date_str = ts[:10]
+                time_str = ts[11:16]
+                dow_str  = ""
+
+            # Duration in minutes
+            dur = None
+            try:
+                open_ts  = t.get("timestamp_sgt", "")
+                close_ts = t.get("closed_at_sgt", "")
+                if open_ts and close_ts:
+                    d1 = datetime.strptime(open_ts[:19], "%Y-%m-%d %H:%M:%S")
+                    d2 = datetime.strptime(close_ts[:19], "%Y-%m-%d %H:%M:%S")
+                    dur = int((d2 - d1).total_seconds() / 60)
+            except Exception:
+                pass
+
+            writer.writerow({
+                "date_sgt":    date_str,
+                "time_sgt":    time_str,
+                "day_of_week": dow_str,
+                "session":     t.get("macro_session") or t.get("session", ""),
+                "direction":   t.get("direction", ""),
+                "score":       t.get("score", ""),
+                "setup":       t.get("setup", ""),
+                "entry_price": t.get("entry_price") or t.get("fill_price", ""),
+                "sl_price":    t.get("sl_price", ""),
+                "tp_price":    t.get("tp_price", ""),
+                "result":      "TP" if (t.get("realized_pnl_usd") or 0) > 0 else (
+                               "SL" if (t.get("realized_pnl_usd") or 0) < 0 else "BE"),
+                "pl_usd":      round(t.get("realized_pnl_usd") or 0, 2),
+                "balance":     round(t.get("balance_after") or 0, 2),
+                "h1_trend":    t.get("h1_trend", ""),
+                "h1_aligned":  t.get("h1_aligned", ""),
+                "ema_pts":     t.get("ema_pts", ""),
+                "orb_pts":     t.get("orb_pts", ""),
+                "cpr_pts":     t.get("cpr_pts", ""),
+                "duration_min": dur or "",
+                "spread_pips": t.get("spread_pips", ""),
+                "units":       t.get("units", ""),
+                "position_usd": t.get("position_usd", ""),
+            })
+
+        csv_bytes = buf.getvalue().encode("utf-8")
+
+        # Write to temp file in /data
+        data_dir  = Path(os.getenv("DATA_DIR", "/data"))
+        filename  = f"cable_scalp_v16_trades_to_{now.strftime('%Y-%m-%d')}.csv"
+        tmp_path  = data_dir / filename
+
+        tmp_path.write_bytes(csv_bytes)
+
+        # Calculate stats for caption
+        wins    = sum(1 for t in trades if (t.get("realized_pnl_usd") or 0) > 0)
+        losses  = sum(1 for t in trades if (t.get("realized_pnl_usd") or 0) < 0)
+        net_pnl = round(sum(t.get("realized_pnl_usd") or 0 for t in trades), 2)
+        wr      = round(wins / len(trades) * 100, 1) if trades else 0
+        months  = sorted(set(
+            (t.get("timestamp_sgt") or "")[:7]
+            for t in trades
+            if len(t.get("timestamp_sgt") or "") >= 7
+        ))
+        period = f"{months[0]} → {months[-1]}" if months else _V16_START
+
+        caption = (
+            f"📊 Cable Scalp v1.6 — Cumulative Trade Log\n"
+            f"Period: {period}\n"
+            f"Trades: {len(trades)}  ({wins}W / {losses}L)  WR {wr}%\n"
+            f"Net P&L: ${net_pnl:+.2f}\n"
+            f"Generated: {now.strftime('%d %b %Y %H:%M SGT')}"
+        )
+
+        alert = TelegramAlert()
+
+        # Update mime type for CSV
+        if not tmp_path.exists():
+            alert.send("📎 Monthly CSV: file write failed.")
+            return
+
+        # Send using sendDocument with CSV mime type
+        import requests
+        from config_loader import load_secrets
+        secrets  = load_secrets()
+        token    = secrets.get("TELEGRAM_TOKEN", "")
+        chat_id  = secrets.get("TELEGRAM_CHAT_ID", "")
+        url      = f"https://api.telegram.org/bot{token}/sendDocument"
+
+        with open(tmp_path, "rb") as fh:
+            r = requests.post(
+                url,
+                data={"chat_id": chat_id, "caption": caption},
+                files={"document": (filename, fh, "text/csv")},
+                timeout=30,
+            )
+
+        if r.status_code == 200:
+            log.info("Monthly CSV export sent: %s (%d trades)", filename, len(trades))
+        else:
+            log.warning("Monthly CSV export failed: HTTP %s: %s",
+                        r.status_code, r.text[:200])
+
+        # Clean up temp file
+        try:
+            tmp_path.unlink()
+        except Exception:
+            pass
+
+    except Exception as exc:
+        log.exception("send_monthly_csv_export error: %s", exc)
