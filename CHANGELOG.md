@@ -2,6 +2,64 @@
 
 ---
 
+## v2.0.0 — 2026-04-28
+
+### TP reduced: 30 pips → 25 pips
+
+**Decision basis:** Live data showed avg achieved win of $40–45 on a $60 target,
+equivalent to 22–25 pip effective capture. Spread cost (1p) means 30p TP requires
+31p raw movement — too far in consolidating conditions, causing overnight holds.
+
+- New TP: **25 pips** (26p effective including spread)
+- SL unchanged: 18 pips
+- New RR: 1.39× | Break-even WR: 41.9%
+- Expected benefit: trades resolve within London session, less overnight exposure
+
+### Force close guards (stale trade prevention)
+
+**Problem:** Apr 27 trade opened at 16:48 SGT, held 8 hours, SL hit at 01:03 SGT.
+M5 signal context was stale within 2 hours. Became accidental swing trade.
+
+Two new guards added to `bot.py` via `force_close_stale_trades()`:
+
+**1. Max trade duration** (`max_trade_duration_hours: 4`, default)
+Any open trade held > 4 hours is force-closed at market. Sends Telegram alert
+with P&L and max pips reached.
+
+**2. Session-end force close** (`force_close_at_session_end: true`, default)
+Closes trade when its originating session ends:
+- London → 21:00 SGT
+- Tokyo → 16:00 SGT
+- US Cont → 04:00 SGT
+
+### US / US Continuation session label separation
+
+Previously both US session (21:00–23:59) and US Continuation (00:00–03:59) used
+`macro_session: "US"` — impossible to separate in reports or signal log.
+
+v2.0 gives US Continuation its own label:
+- US session → `"US"` (disabled, us_session_start_hour: 99)
+- US Continuation → `"US_Cont"` (enabled, threshold 4/6, cap 10)
+
+New setting: `max_trades_us_cont: 10`
+New session threshold key: `session_thresholds.US_Cont: 4`
+New SESSION_BANNER: `"US_Cont": "🌙 US CONT"`
+
+### MFE tracking
+
+`track_max_pips()` was already present in v1.9 but not documented.
+v2.0 makes it visible — `max_pips_reached` now appears in:
+- Trade history JSON
+- Monthly CSV export
+- Force-close Telegram alert
+
+### Files changed
+`settings.json`, `version.py`, `bot.py`, `telegram_templates.py`,
+`telegram_alert.py`, `reporting.py`, `signal_logger.py`, `signals.py`,
+`scheduler.py`, `README.md`, `SETTINGS.md`, `CONFLUENCE_READY.md`
+
+---
+
 ## v1.9.0 — 2026-04-27
 
 ### Signal logging for AI/ML data collection

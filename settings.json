@@ -1,5 +1,5 @@
 {
-  "bot_name": "Cable Scalp v1.9",
+  "bot_name": "Cable Scalp v2.0",
   "demo_mode": true,
   "enabled": true,
   "_comment_pairs": "Per-pair settings override any matching global key for that pair's cycle.",
@@ -45,7 +45,8 @@
   "session_thresholds": {
     "London": 4,
     "US": 4,
-    "Tokyo": 5
+    "Tokyo": 5,
+    "US_Cont": 4
   },
   "news_filter_enabled": true,
   "news_block_before_min": 30,
@@ -95,7 +96,7 @@
   "pair_sl_tp": {
     "GBP_USD": {
       "sl_pips": 18,
-      "tp_pips": 30,
+      "tp_pips": 25,
       "pip_value_usd": 10.0,
       "be_trigger_pips": 20
     }
@@ -107,5 +108,8 @@
   "h1_ema_period": 21,
   "be_trigger_pips": 20,
   "signal_logging_enabled": false,
-  "signal_log_min_score": 3
+  "signal_log_min_score": 3,
+  "max_trade_duration_hours": 4,
+  "force_close_at_session_end": true,
+  "max_trades_us_cont": 10
 }

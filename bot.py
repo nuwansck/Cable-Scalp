@@ -1,4 +1,4 @@
-"""Main orchestrator for Cable Scalp v1.9 — GBP/USD M5 Scalper
+"""Main orchestrator for Cable Scalp v2.0 — GBP/USD M5 Scalper
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
@@ -62,6 +62,7 @@ _startup_reconcile_done: bool = False
 SESSION_BANNERS = {
     "London": "🇬🇧 LONDON",
     "US":     "🗽 US",
+    "US_Cont": "🌙 US CONT",
     "Tokyo":  "🗼 TOKYO",
 }
 
@@ -132,7 +133,7 @@ def _pip_size(settings: dict) -> float:
 def _pip_dp(pip: float) -> int:
     """Decimal places for price rounding given pip size."""
     if pip <= 0.0001: return 5   # GBP_USD (Cable)
-    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v1.9)
+    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.0)
     return 2
 
 
@@ -194,7 +195,7 @@ def _signal_payload(**kwargs):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def validate_settings(settings: dict) -> dict:
-    required = ["pairs"]  # Cable Scalp v1.9: pair_sl_tp fixed pips used exclusively
+    required = ["pairs"]  # Cable Scalp v2.0: pair_sl_tp fixed pips used exclusively
     missing  = [k for k in required if k not in settings]
     if missing:
         raise ValueError(f"Missing required settings keys: {missing}")
@@ -220,6 +221,9 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("telegram_min_score_alert",   4)
     settings.setdefault("signal_logging_enabled",     False)
     settings.setdefault("signal_log_min_score",        3)
+    settings.setdefault("max_trade_duration_hours",    4)
+    settings.setdefault("force_close_at_session_end",  True)
+    settings.setdefault("max_trades_us_cont",          10)
     settings.setdefault("friday_cutoff_hour_sgt",     23)
     settings.setdefault("friday_cutoff_minute_sgt",   0)
     settings.setdefault("news_lookahead_min",         120)
@@ -351,13 +355,15 @@ def is_dead_zone_time(now_sgt: datetime, settings: dict | None = None) -> bool:
 def get_window_key(session_name: str | None) -> str | None:
     if session_name == "London Window": return "London"
     if session_name == "US Window":     return "US"
+    if session_name == "US Cont.":      return "US_Cont"
     if session_name == "Tokyo Window":  return "Tokyo"
     return None
 
 
 def get_window_trade_cap(window_key: str | None, settings: dict) -> int | None:
     if window_key == "London": return int(settings.get("max_trades_london", 10))
-    if window_key == "US":     return int(settings.get("max_trades_us",     10))
+    if window_key == "US":      return int(settings.get("max_trades_us",      10))
+    if window_key == "US_Cont": return int(settings.get("max_trades_us_cont", 10))
     if window_key == "Tokyo":  return int(settings.get("max_trades_tokyo",  10))
     return None
 
@@ -366,7 +372,8 @@ def window_trade_count(history: list, today_str: str,
                        window_key: str, instrument: str) -> int:
     aliases = {
         "London": {"London", "London Window"},
-        "US":     {"US", "US Window"},
+        "US":      {"US", "US Window"},
+        "US_Cont": {"US_Cont", "US Cont."},
         "Tokyo":  {"Tokyo", "Tokyo Window"},
     }
     valid = aliases.get(window_key, {window_key})
@@ -383,7 +390,8 @@ def session_losses(history: list, today_str: str,
                    macro: str, instrument: str) -> int:
     aliases = {
         "London": {"London", "London Window"},
-        "US":     {"US", "US Window"},
+        "US":      {"US", "US Window"},
+        "US_Cont": {"US_Cont", "US Cont."},
         "Tokyo":  {"Tokyo", "Tokyo Window"},
     }
     valid = aliases.get(macro, {macro})
@@ -781,6 +789,83 @@ def track_max_pips(history: list, trader, settings: dict, instrument: str) -> bo
     return changed
 
 
+
+def force_close_stale_trades(history: list, trader, alert, settings: dict,
+                              instrument: str, now_sgt, session_end_hour: int) -> bool:
+    """Force-close any open trade that has exceeded max_trade_duration_hours
+    or whose originating session has ended.
+
+    v2.0: Prevents M5 scalp trades from becoming accidental overnight swing trades.
+    Max duration: 4 hours (configurable via max_trade_duration_hours).
+    Session end: closes London trades when London session ends at 21:00 SGT.
+    """
+    max_hours = float(settings.get("max_trade_duration_hours", 4))
+    force_at_end = bool(settings.get("force_close_at_session_end", True))
+    changed = False
+
+    for trade in history:
+        if trade.get("instrument") != instrument: continue
+        if trade.get("status") != "FILLED": continue
+        if trade.get("realized_pnl_usd") is not None: continue
+
+        trade_id = trade.get("trade_id")
+        if not trade_id: continue
+
+        open_ts = trade.get("timestamp_sgt", "")
+        if not open_ts: continue
+
+        try:
+            open_dt = _parse_sgt_timestamp(open_ts)
+            if not open_dt: continue
+            elapsed_hours = (now_sgt - open_dt).total_seconds() / 3600
+
+            reason = None
+
+            # Check max duration
+            if elapsed_hours >= max_hours:
+                reason = f"Max duration {max_hours:.0f}h exceeded ({elapsed_hours:.1f}h open)"
+
+            # Check session end — only if session has actually ended
+            if force_at_end and reason is None:
+                trade_session = trade.get("macro_session", "")
+                if trade_session == "London" and now_sgt.hour >= 21:
+                    reason = f"London session ended — force closing after {elapsed_hours:.1f}h"
+                elif trade_session == "Tokyo" and now_sgt.hour >= 16:
+                    reason = f"Tokyo session ended — force closing after {elapsed_hours:.1f}h"
+                elif trade_session == "US_Cont" and now_sgt.hour >= 4:
+                    reason = f"US Cont. session ended — force closing after {elapsed_hours:.1f}h"
+
+            if reason:
+                log.info("[%s] Force closing trade %s: %s", instrument, trade_id, reason)
+                result = trader.close_trade(str(trade_id))
+                if result:
+                    pnl = trader.get_trade_pnl(str(trade_id))
+                    trade["realized_pnl_usd"] = pnl or 0.0
+                    trade["closed_at_sgt"]    = now_sgt.strftime("%Y-%m-%d %H:%M:%S")
+                    trade["close_reason"]     = "FORCE_CLOSE"
+                    trade["force_close_reason"] = reason
+                    changed = True
+                    log.info("[%s] Force closed trade %s | pnl=$%.2f | reason=%s",
+                             instrument, trade_id, pnl or 0, reason)
+                    try:
+                        max_p = trade.get("max_pips_reached", 0) or 0
+                        alert.send(
+                            f"⏱ Force Close — {instrument.replace('_','/')}\n"
+                            f"Trade {trade_id} | {trade.get('direction','')}\n"
+                            f"Reason: {reason}\n"
+                            f"P&L: ${pnl or 0:.2f} | Max pips reached: {max_p:.1f}p"
+                        )
+                    except Exception:
+                        pass
+                else:
+                    log.warning("[%s] Force close of trade %s failed — will retry next cycle",
+                                instrument, trade_id)
+        except Exception as exc:
+            log.warning("force_close_stale_trades error: %s", exc)
+
+    return changed
+
+
 # ── PnL backfill ───────────────────────────────────────────────────────────────
 
 def backfill_pnl(history: list, trader, alert, settings: dict,
@@ -1012,7 +1097,8 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
             _tok_s = int(settings.get("tokyo_session_start_hour",   8))
             _tok_e = int(settings.get("tokyo_session_end_hour",    15))
             _hours_map = {
-                "US Window":     f"{_us_s:02d}:00–{_us_e2:02d}:59",
+                "US Window":  f"{_us_s:02d}:00–{_us_e:02d}:59",
+                "US Cont.":   f"00:00–{_us_e2:02d}:59",
                 "London Window": f"{_lon_s:02d}:00–{_lon_e:02d}:59",
                 "Tokyo Window":  f"{_tok_s:02d}:00–{_tok_e:02d}:59",
             }
@@ -1182,6 +1268,11 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
 
     # Track peak pip distance on every open trade
     if track_max_pips(history, trader, settings, instrument):
+        save_history(history)
+
+    # Force-close stale trades (max duration or session ended)
+    _sess_end_h = int(settings.get("london_session_end_hour", 20)) + 1
+    if force_close_stale_trades(history, trader, alert, settings, instrument, now_sgt, _sess_end_h):
         save_history(history)
 
     # ── SL re-entry gap ───────────────────────────────────────────────────────

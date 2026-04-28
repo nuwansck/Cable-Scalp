@@ -1,6 +1,6 @@
-# Cable Scalp v1.9 — Technical Specification & Operations Wiki
+# Cable Scalp v2.0 — Technical Specification & Operations Wiki
 
-**Bot name:** Cable Scalp v1.9
+**Bot name:** Cable Scalp v2.0
 **Instrument:** GBP/USD (Cable) only
 **Exchange:** OANDA (practice & live)
 **Deployment:** Railway (PaaS)
@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Scope
 
-Cable Scalp v1.9 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+Cable Scalp v2.0 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
 It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
 with minimum score thresholds per session. All configuration lives in `settings.json`.
 
@@ -70,7 +70,8 @@ All times SGT (UTC+8):
 | Dead zone | 04:00–07:59 | No trading | — |
 | Tokyo | 08:00–15:59 | ≥ 5/6 | 10 |
 | London | 16:00–20:59 | ≥ 4/6 | 10 |
-| US session | 21:00–23:59 | **DISABLED** | — |
+| US session      | 21:00–23:59 | **DISABLED**  | —  |
+| US Continuation | 00:00–03:59 | ≥ 4/6         | 10 |
 | US continuation | 00:00–03:59 | ≥ 4/6 | 10 |
 
 Market fully closed Saturday and Sunday. Monday opens at 08:00 SGT.
@@ -133,6 +134,39 @@ materially lower win rate.
 
 All message cards defined in `telegram_templates.py`.
 WATCHING cards for score < `telegram_min_score_alert` (default 4) are suppressed. Score 3 alerts never resulted in trades and caused message flooding — silenced in v1.8.
+
+### Trade duration guards (v2.0)
+
+Two new guards prevent M5 scalp trades from becoming overnight drift trades:
+
+**1. Max trade duration** (`max_trade_duration_hours: 4`)
+Any open trade held longer than 4 hours is force-closed at market price.
+Reason: M5 signal context (ORB age, EMA cross) is stale after 4 hours.
+
+**2. Session-end force close** (`force_close_at_session_end: true`)
+A trade is force-closed when its originating session ends:
+- London trade → closes at 21:00 SGT
+- Tokyo trade → closes at 16:00 SGT
+- US Cont trade → closes at 04:00 SGT
+
+Both guards send a Telegram alert with P&L and max pips reached.
+
+### US / US Continuation label separation (v2.0)
+
+US session (21:00–23:59 SGT) and US Continuation (00:00–03:59 SGT) previously
+shared the same `macro_session: "US"` label. In v2.0 they are separate:
+- US session → `macro_session: "US"` (disabled, sentinel 99)
+- US Continuation → `macro_session: "US_Cont"` (enabled, cap 10, threshold 4)
+
+This enables correct per-session reporting in weekly/monthly summaries.
+
+### TP reduced to 25 pips (v2.0)
+
+Reduced from 30p → 25p based on live data analysis:
+- Avg achieved win was 22–25 pip equivalent (spread cost eating 2–3p)
+- 30p TP caused overnight hold risk — market couldn't reach target in one session
+- 25p TP resolves within London session in trending conditions
+- Break-even WR at 25p/18p RR: 41.9% (well below current 55%+ London rate)
 
 ### Signal logging (v1.9)
 

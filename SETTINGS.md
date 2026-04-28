@@ -1,4 +1,4 @@
-# Cable Scalp v1.9 — Settings Reference
+# Cable Scalp v2.0 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v1.9` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v2.0` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -30,6 +30,9 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 | `m5_candle_count` | `40` | Number of M5 candles fetched per cycle. |
 | `atr_period` | `14` | ATR calculation period. |
 | `signal_logging_enabled` | `false` | Enable/disable AI signal data collection. `false` = silent. Flip to `true` to start logging all signal evaluations to `/data/signal_log.csv`. |
+| `max_trade_duration_hours` | `4` | Force-close any open trade after this many hours. Prevents M5 scalp setups becoming overnight swing trades. v2.0: 4 hours. |
+| `force_close_at_session_end` | `true` | Force-close a trade when its originating session ends. London trade closes at 21:00 SGT. Tokyo at 16:00 SGT. US Cont at 04:00 SGT. |
+| `max_trades_us_cont` | `10` | Trade cap for US Continuation session (00:00–03:59 SGT). Separate from US session cap in v2.0. |
 | `signal_log_min_score` | `3` | Minimum score to capture in signal log. Score 0-2 is pure noise. Score 3+ captures meaningful setups that approached but didn't reach threshold. |
 | `telegram_min_score_alert` | `4` | WATCHING cards below this score are silently suppressed. Set to 4 in v1.8 — score 3 alerts removed (never trade, just noise). London/US cont threshold is 4, Tokyo is 5. |
 

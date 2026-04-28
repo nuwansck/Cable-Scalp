@@ -1,4 +1,4 @@
-"""reporting.py — Cable Scalp v1.9 Telegram Performance Reports
+"""reporting.py — Cable Scalp v2.0 Telegram Performance Reports
 
 Three scheduled reports, all reading directly from /data/trade_history.json
 on the Railway persistent volume. No archive file needed — the 90-day rolling
@@ -676,7 +676,7 @@ def send_monthly_csv_export() -> None:
         period = f"{months[0]} → {months[-1]}" if months else _V16_START
 
         caption = (
-            f"📊 Cable Scalp v1.9 — Cumulative Trade Log\n"
+            f"📊 Cable Scalp v2.0 — Cumulative Trade Log\n"
             f"Period: {period}\n"
             f"Trades: {len(trades)}  ({wins}W / {losses}L)  WR {wr}%\n"
             f"Net P&L: ${net_pnl:+.2f}\n"
@@ -762,7 +762,7 @@ def send_monthly_signal_export() -> None:
 
         filename = f"cable_scalp_v19_signals_to_{now.strftime('%Y-%m-%d')}.csv"
         caption = (
-            f"📡 Cable Scalp v1.9 — Signal Log\n"
+            f"📡 Cable Scalp v2.0 — Signal Log\n"
             f"Period: 2026-04-26 → {now.strftime('%d %b %Y')}\n"
             f"Rows: {total_rows}  |  Fired: {fired}  |  Watched: {watched}  |  Blocked: {blocked}\n"
             f"Generated: {now.strftime('%d %b %Y %H:%M SGT')}"
