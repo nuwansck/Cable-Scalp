@@ -61,8 +61,9 @@ _startup_reconcile_done: bool = False
 
 SESSION_BANNERS = {
     "London": "🇬🇧 LONDON",
-    "US":     "🗽 US",
+    "US":      "🗽 US",
     "US_Cont": "🌙 US CONT",
+    'US_Cont': "🌙 US CONT",
     "Tokyo":  "🗼 TOKYO",
 }
 
@@ -676,7 +677,7 @@ def send_once_per_state(alert, cache: dict, key: str, value: str,
 def check_breakeven(history: list, trader, alert, settings: dict, instrument: str):
     """Move SL to break-even when trade profit reaches be_trigger_pips.
 
-    v1.9: trigger derived from per-pair be_trigger_pips (a pip count) converted
+    v2.0: trigger derived from per-pair be_trigger_pips (a pip count) converted
     to a price distance using pip_size.  Replaces the old breakeven_trigger_usd
     which was a quote-currency price offset — correct for USD pairs but almost
     zero for JPY pairs (0.002 yen ≈ 0.2 pips), making breakeven fire at entry.
