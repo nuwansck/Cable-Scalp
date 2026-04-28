@@ -23,7 +23,7 @@ Key per-pair settings used here: pair_sl_tp (sl_pips, tp_pips, pip_value_usd).
 
 ORB cache key includes instrument so each pair has its own ORB per session.
 
-v2.0: GBP/USD only. pip_value_usd is static $10.00 (standard for USD-quoted pairs).
+v1.9: GBP/USD only. pip_value_usd is static $10.00 (standard for USD-quoted pairs).
 GBP/USD uses static $10.00/pip (standard for USD-quoted pairs).
 """
 
@@ -547,7 +547,7 @@ class SignalEngine:
                            pair_cfg: dict) -> float:
         """Return pip_value_usd. GBP/USD = static $10.00 per pip per 100k units.
 
-        JPY dynamic logic removed in v2.0 — Cable Scalp is GBP/USD only.
+        JPY dynamic logic removed in v1.9 — Cable Scalp is GBP/USD only.
         """
         return float(pair_cfg.get("pip_value_usd", 10.0))
 

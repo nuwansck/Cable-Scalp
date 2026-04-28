@@ -103,7 +103,6 @@ Key settings in `settings.json`:
   "signal_threshold":      4,
   "telegram_min_score_alert": 4,   // score 3 watching alerts suppressed
   "signal_logging_enabled":  false,
-  "min_rr_ratio":            1.3
   "max_trade_duration_hours":  4,      // force close after 4 hours
   "force_close_at_session_end": true   // close when session ends // flip to true to collect AI training data
   "signal_log_min_score":    3      // minimum score to log (0-6)

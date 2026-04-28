@@ -61,9 +61,8 @@ _startup_reconcile_done: bool = False
 
 SESSION_BANNERS = {
     "London": "🇬🇧 LONDON",
-    "US":      "🗽 US",
+    "US":     "🗽 US",
     "US_Cont": "🌙 US CONT",
-    'US_Cont': "🌙 US CONT",
     "Tokyo":  "🗼 TOKYO",
 }
 
@@ -677,7 +676,7 @@ def send_once_per_state(alert, cache: dict, key: str, value: str,
 def check_breakeven(history: list, trader, alert, settings: dict, instrument: str):
     """Move SL to break-even when trade profit reaches be_trigger_pips.
 
-    v2.0: trigger derived from per-pair be_trigger_pips (a pip count) converted
+    v1.9: trigger derived from per-pair be_trigger_pips (a pip count) converted
     to a price distance using pip_size.  Replaces the old breakeven_trigger_usd
     which was a quote-currency price offset — correct for USD pairs but almost
     zero for JPY pairs (0.002 yen ≈ 0.2 pips), making breakeven fire at entry.
@@ -1094,6 +1093,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
             _lon_s = int(settings.get("london_session_start_hour", 16))
             _lon_e = int(settings.get("london_session_end_hour",   20))
             _us_s  = int(settings.get("us_session_start_hour",     21))
+            _us_e  = int(settings.get("us_session_end_hour",       23))
             _us_e2 = int(settings.get("us_session_early_end_hour",  3))
             _tok_s = int(settings.get("tokyo_session_start_hour",   8))
             _tok_e = int(settings.get("tokyo_session_end_hour",    15))

@@ -555,7 +555,7 @@ def send_monthly_report() -> None:
 _V16_START = "2026-04-26"
 
 def send_monthly_csv_export() -> None:
-    """Send cumulative CSV of all v2.0 trades on the last day of each month at 08:30 SGT.
+    """Send cumulative CSV of all v1.9 trades on the last day of each month at 08:30 SGT.
 
     The CSV grows every month:
       Apr 30  → April trades only
