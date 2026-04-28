@@ -53,6 +53,16 @@ v2.0 makes it visible — `max_pips_reached` now appears in:
 - Monthly CSV export
 - Force-close Telegram alert
 
+### min_rr_ratio fix (v2.0.1 hotfix)
+
+After deploy, first signal log showed:
+`Signal BLOCKED | score=3/6 blockers=R:R 1.39 < 1:1.6`
+
+Root cause: `min_rr_ratio` was still 1.6 but new 25p/18p RR = 1.39×.
+Every trade was being blocked before it could fire.
+
+Fix: `min_rr_ratio` updated from `1.6` → `1.3` (0.09 buffer below actual 1.39×).
+
 ### Files changed
 `settings.json`, `version.py`, `bot.py`, `telegram_templates.py`,
 `telegram_alert.py`, `reporting.py`, `signal_logger.py`, `signals.py`,

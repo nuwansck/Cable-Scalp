@@ -167,6 +167,7 @@ Reduced from 30p → 25p based on live data analysis:
 - 30p TP caused overnight hold risk — market couldn't reach target in one session
 - 25p TP resolves within London session in trending conditions
 - Break-even WR at 25p/18p RR: 41.9% (well below current 55%+ London rate)
+- `min_rr_ratio` updated from 1.6 → 1.3 (actual RR = 1.39×, buffer of 0.09)
 
 ### Signal logging (v1.9)
 

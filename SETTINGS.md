@@ -60,7 +60,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 |---|---|---|
 | `position_full_usd` | `60` | Score 5–6 → ~20,000 units → **$2.00/pip** | Dollar risk for score 5–6 (full position). |
 | `position_partial_usd` | `45` | Score 4 → ~15,000 units → **$1.50/pip** | Dollar risk for score 4 (partial position). |
-| `min_rr_ratio` | `1.6` | Minimum RR — trade blocked if computed RR falls below this. |
+| `min_rr_ratio` | `1.3` | Minimum RR ratio required to place a trade. Updated in v2.0 from 1.6 to 1.3 to match the new 25p TP / 18p SL configuration (actual RR = 1.39×). | Minimum RR — trade blocked if computed RR falls below this. |
 
 ### `pair_sl_tp` — GBP/USD fixed pip values
 

@@ -231,7 +231,7 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("loss_streak_cooldown_min",   30)
     settings.setdefault("orb_fresh_minutes",          60)
     settings.setdefault("orb_aging_minutes",          120)
-    settings.setdefault("min_rr_ratio",               1.6)
+    settings.setdefault("min_rr_ratio",               1.3)
     settings.setdefault("rr_ratio",                   1.67)  # fallback only — pair_sl_tp always used
     settings.setdefault("ema_fast_period",            9)
     settings.setdefault("ema_slow_period",            21)
