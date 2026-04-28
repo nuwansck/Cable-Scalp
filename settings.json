@@ -107,7 +107,7 @@
   "h1_filter_mode": "strict",
   "h1_ema_period": 21,
   "be_trigger_pips": 20,
-  "signal_logging_enabled": false,
+  "signal_logging_enabled": true,
   "signal_log_min_score": 3,
   "max_trade_duration_hours": 4,
   "force_close_at_session_end": true,
