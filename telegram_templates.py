@@ -1,4 +1,4 @@
-"""Telegram message templates for Cable Scalp v2.0
+"""Telegram message templates for Cable Scalp v2.1
 AtomicFX-style: clean, state-change only, minimal noise.
 """
 from __future__ import annotations
@@ -11,12 +11,13 @@ def _dir_icon(d: str) -> str:
 
 def _session_icon(s: str) -> str:
     u = s.upper()
-    if "LONDON" in u: return "🇬🇧"
-    if "US" in u:     return "🗽"
-    if "TOKYO" in u:  return "🗼"
-    if "ASIAN" in u or "PRE" in u: return "🌐"
-    if "EUROPEAN" in u: return "☀️"
-    if "DEAD" in u:   return "✈️"
+    if "LONDON" in u:                        return "🇬🇧"
+    if "CONT" in u or "US_CONT" in u:        return "🌙"
+    if "US" in u:                            return "🗽"
+    if "TOKYO" in u:                         return "🗼"
+    if "ASIAN" in u or "PRE" in u:           return "🌐"
+    if "EUROPEAN" in u:                      return "☀️"
+    if "DEAD" in u:                          return "✈️"
     return "📊"
 
 def _pos_label(p: int) -> str:
@@ -36,7 +37,7 @@ def _split_banner(banner: str) -> tuple[str, str]:
     """Extract pair from banner.
     Handles both:
       '🇬🇧 LONDON [GBP/USD]'  → ('🇬🇧 LONDON [GBP/USD]', 'GBP/USD')
-      'Cable Scalp v2.0 | GBP/USD' → ('Cable Scalp v2.0', 'GBP/USD')
+      'Cable Scalp v2.1 | GBP/USD' → ('Cable Scalp v2.1', 'GBP/USD')
     """
     if "[" in banner and "]" in banner:
         pair = banner[banner.index("[")+1 : banner.index("]")]
@@ -45,6 +46,19 @@ def _split_banner(banner: str) -> tuple[str, str]:
         bot, pair = banner.rsplit(" | ", 1)
         return bot.strip(), pair.strip("[]").strip()
     return banner.strip(), ""
+
+def _clean_pair(s: str) -> str:
+    return s.replace("_", "/")
+
+def _clean_session(s: str) -> str:
+    mapping = {
+        "US Window":     "US Window",
+        "US Cont.":      "US Cont.",
+        "US_Cont":       "US Cont.",
+        "London Window": "London Window",
+        "Tokyo Window":  "Tokyo Window",
+    }
+    return mapping.get(s, s)
 
 def _ps(dp: int) -> float:
     return 10 ** -(dp - 1)
@@ -136,6 +150,8 @@ def msg_trade_opened(
     h1_trend="UNKNOWN", h1_aligned=True,
 ) -> str:
     bot, pair = _split_banner(banner)
+    pair    = _clean_pair(pair)
+    session = _clean_session(session)
     mode = "DEMO" if demo else "LIVE"
     di   = _dir_icon(direction)
     si   = _session_icon(session)
@@ -210,7 +226,7 @@ def msg_trade_closed(trade_id, direction, setup, entry, close_price,
         f"Move:    {pip_str}\n"
         f"PnL:     ${pnl:+.2f}{dur}\n"
         f"{max_line}"
-        f"Session: {session}  |  Mode: {mode}"
+        f"Session: {_clean_session(session)}  |  Mode: {mode}"
     )
 
 
@@ -339,7 +355,7 @@ def msg_order_failed(direction, instrument, units, error,
              if free_margin is not None and required_margin is not None else "")
     return (
         f"❌ Order Failed\n{_DIV}\n"
-        f"{direction}  {instrument}  {int(units):,} units\n"
+        f"{direction}  {_clean_pair(instrument)}  {int(units):,} units\n"
         f"Error:  {error}\n"
         f"{mline}"
         f"Retry:  {'attempted' if retry_attempted else 'not attempted'}\n"
@@ -354,7 +370,7 @@ def msg_margin_adjustment(instrument, requested_units, adjusted_units,
     action = "Skipping trade" if adjusted_units <= 0 else "Using smaller size"
     return (
         f"⚠️  Margin Protection\n{_DIV}\n"
-        f"Pair:      {instrument}\n"
+        f"Pair:      {_clean_pair(instrument)}\n"
         f"Requested: {int(requested_units):,}\n"
         f"Adjusted:  {int(adjusted_units):,}\n"
         f"Free Mgn:  ${free_margin:.2f}\n"
@@ -415,7 +431,7 @@ def msg_startup(
         + (f"  🚫 US session   disabled\n" if us_start >= 99 else
            f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US         cap {max_trades_us}  score≥{us_thr}\n")
         + (f"  🚫 US cont.    disabled\n" if us_early_end >= 99 else
-           f"  🗽 00:00–{us_early_end:02d}:59  US cont.   cap {max_trades_us}  score≥{us_thr}\n")
+           f"  🌙 00:00–{us_early_end:02d}:59  US cont.   cap {max_trades_us}  score≥{us_thr}\n")
         + f"{_DIV}\n"
         + f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss cap: {max_losing_day}/day\n"
         f"Global cap: {max_total_open} open trades"

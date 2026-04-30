@@ -2,6 +2,43 @@
 
 ---
 
+## v2.1.0 — 2026-04-30
+
+### Telegram template fixes
+
+**Problem 1 — GBP_USD showing instead of GBP/USD**
+`msg_trade_opened`, `msg_order_failed`, `msg_margin_adjustment` were displaying
+the raw OANDA instrument code with underscore. Fixed with `_clean_pair()` helper.
+
+**Problem 2 — "US Window" showing instead of "US Cont."**
+US continuation trades (00:00–03:59 SGT) were labelled "US Window" in trade
+open/close messages — same label as the disabled US session. Fixed with
+`_clean_session()` helper that maps "US_Cont" → "US Cont." and adds 🌙 icon.
+
+**Problem 3 — US cont. startup card icon**
+Startup card was showing 🗽 for US cont. Changed to 🌙 to match the new
+US_Cont session label separation introduced in v2.0.
+
+**New helpers added to telegram_templates.py:**
+- `_clean_pair(s)` — converts GBP_USD → GBP/USD
+- `_clean_session(s)` — normalises session display names
+
+### Position sizing increase
+
+Based on $3,000 live balance and 2/2 TP hit rate under v2.0:
+
+| Score | Before | After | Risk % |
+|---|---|---|---|
+| Score 4 | $60 | **$90** | 3.0% of $3k |
+| Score 5–6 | $90 | **$120** | 4.0% of $3k |
+
+### Files changed
+`telegram_templates.py`, `bot.py`, `settings.json`, `version.py`,
+`telegram_alert.py`, `reporting.py`, `scheduler.py`, `signal_logger.py`,
+`signals.py`, `README.md`, `SETTINGS.md`, `CONFLUENCE_READY.md`
+
+---
+
 ## v2.0.0 — 2026-04-28
 
 ### TP reduced: 30 pips → 25 pips

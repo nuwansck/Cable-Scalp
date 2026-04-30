@@ -1,4 +1,4 @@
-# Cable Scalp v2.0 — Settings Reference
+# Cable Scalp v2.1 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v2.0` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v2.1` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -58,8 +58,8 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `position_full_usd` | `60` | Score 5–6 → ~20,000 units → **$2.00/pip** | Dollar risk for score 5–6 (full position). |
-| `position_partial_usd` | `45` | Score 4 → ~15,000 units → **$1.50/pip** | Dollar risk for score 4 (partial position). |
+| `position_full_usd` | `120` | Risk in USD for score 5–6 trades. Updated v2.1: $60 → $120. | Score 5–6 → ~20,000 units → **$2.00/pip** | Dollar risk for score 5–6 (full position). |
+| `position_partial_usd` | `90` | Risk in USD for score 4 trades. Updated v2.1: $45 → $90. | Score 4 → ~15,000 units → **$1.50/pip** | Dollar risk for score 4 (partial position). |
 | `min_rr_ratio` | `1.3` | Minimum RR ratio required to place a trade. Updated in v2.0 from 1.6 to 1.3 to match the new 25p TP / 18p SL configuration (actual RR = 1.39×). | Minimum RR — trade blocked if computed RR falls below this. |
 
 ### `pair_sl_tp` — GBP/USD fixed pip values

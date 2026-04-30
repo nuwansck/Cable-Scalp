@@ -1,4 +1,4 @@
-"""Main orchestrator for Cable Scalp v2.0 — GBP/USD M5 Scalper
+"""Main orchestrator for Cable Scalp v2.1 — GBP/USD M5 Scalper
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
@@ -133,7 +133,7 @@ def _pip_size(settings: dict) -> float:
 def _pip_dp(pip: float) -> int:
     """Decimal places for price rounding given pip size."""
     if pip <= 0.0001: return 5   # GBP_USD (Cable)
-    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.0)
+    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.1)
     return 2
 
 
@@ -195,7 +195,7 @@ def _signal_payload(**kwargs):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def validate_settings(settings: dict) -> dict:
-    required = ["pairs"]  # Cable Scalp v2.0: pair_sl_tp fixed pips used exclusively
+    required = ["pairs"]  # Cable Scalp v2.1: pair_sl_tp fixed pips used exclusively
     missing  = [k for k in required if k not in settings]
     if missing:
         raise ValueError(f"Missing required settings keys: {missing}")
@@ -676,7 +676,7 @@ def send_once_per_state(alert, cache: dict, key: str, value: str,
 def check_breakeven(history: list, trader, alert, settings: dict, instrument: str):
     """Move SL to break-even when trade profit reaches be_trigger_pips.
 
-    v1.9: trigger derived from per-pair be_trigger_pips (a pip count) converted
+    v2.1: trigger derived from per-pair be_trigger_pips (a pip count) converted
     to a price distance using pip_size.  Replaces the old breakeven_trigger_usd
     which was a quote-currency price offset — correct for USD pairs but almost
     zero for JPY pairs (0.002 yen ≈ 0.2 pips), making breakeven fire at entry.
