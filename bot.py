@@ -1112,7 +1112,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
                     alert, ops,
                     "session_open_state", f"session_open:{session}:{today}",
                     msg_session_open(
-                        session_name=f"{instrument} {session}",
+                        session_name=f"{instrument.replace('_', '/')} {_clean_session(session)}",
                         session_hours_sgt=_sess_hours,
                         trade_cap=_wcap,
                         trades_today=_dc,
