@@ -437,7 +437,7 @@ def msg_startup(
            f"  🌙 00:00–{us_early_end:02d}:59  US Cont.   max {max_trades_us_cont}  score≥{us_cont_thr}\n")
         + f"{_DIV}\n"
         + f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss max: {max_losing_day}/day\n"
-        f"Global max: {max_total_open} open trades"
+        f"Global max: {max_total_open} open trade" if int(max_total_open) == 1 else f"Global max: {max_total_open} open trades"
     )
 
 
