@@ -32,7 +32,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 | `signal_logging_enabled` | `false` | Enable/disable AI signal data collection. `false` = silent. Flip to `true` to start logging all signal evaluations to `/data/signal_log.csv`. |
 | `max_trade_duration_hours` | `4` | Force-close any open trade after this many hours. Prevents M5 scalp setups becoming overnight swing trades. v2.0: 4 hours. |
 | `force_close_at_session_end` | `true` | Force-close a trade when its originating session ends. London trade closes at 21:00 SGT. Tokyo at 16:00 SGT. US Cont. at 04:00 SGT. |
-| `max_trades_us_cont` | `10` | Trade cap for US Continuation session (00:00–03:59 SGT). Separate from US session cap in v2.0. |
+| `max_trades_us_cont` | `4` | Trade cap for US Continuation session (00:00–03:59 SGT). Separate from US session cap in v2.0. |
 | `signal_log_min_score` | `3` | Minimum score to capture in signal log. Score 0-2 is pure noise. Score 3+ captures meaningful setups that approached but didn't reach threshold. |
 | `telegram_min_score_alert` | `4` | WATCHING cards below this score are silently suppressed. Set to 4 in v1.8 — score 3 alerts removed (never trade, just noise). London/US Cont. threshold is 4, Tokyo is 5. |
 
@@ -91,12 +91,12 @@ GBP/USD SL/TP summary:
 |---|---|---|
 | `max_total_open_trades` | `1` | Global hard cap — max open trades across all pairs simultaneously. |
 | `max_concurrent_trades` | `1` | Max open trades per pair. |
-| `max_losing_trades_day` | `8` | Daily loss cap — bot pauses until 08:00 SGT. |
-| `max_trades_day` | `20` | Max trades per trading day. |
-| `max_trades_london` | `10` | Max trades per London window. |
-| `max_trades_us` | `10` | Max trades per US window. |
-| `max_trades_tokyo` | `10` | Max trades per Tokyo window. |
-| `max_losing_trades_session` | `4` | Max losses per session window before pausing. |
+| `max_losing_trades_day` | `4` | Daily loss cap — bot pauses until 08:00 SGT. |
+| `max_trades_day` | `12` | Max trades per trading day. |
+| `max_trades_london` | `4` | Max trades per London window. |
+| `max_trades_us` | `4` | Max trades per US window. |
+| `max_trades_tokyo` | `4` | Max trades per Tokyo window. |
+| `max_losing_trades_session` | `2` | Max losses per session window before pausing. |
 | `min_trade_units` | `1000` | Reject margin-adjusted orders smaller than this. |
 | `loss_streak_cooldown_min` | `30` | Minutes to pause after consecutive losses. |
 | `sl_reentry_gap_min` | `5` | Minimum minutes before re-entering after an SL close. |

@@ -210,7 +210,7 @@ def validate_settings(settings: dict) -> dict:
     # be_trigger_pips: break-even trigger in pips
     settings.setdefault("be_trigger_pips",             20)
     settings.setdefault("trading_day_start_hour_sgt", 8)
-    settings.setdefault("max_losing_trades_session",  4)
+    settings.setdefault("max_losing_trades_session",  2)
     settings.setdefault("exhaustion_atr_mult",        3.0)
     settings.setdefault("margin_safety_factor",       0.6)
     settings.setdefault("margin_retry_safety_factor", 0.4)
@@ -223,7 +223,7 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("signal_log_min_score",        3)
     settings.setdefault("max_trade_duration_hours",    4)
     settings.setdefault("force_close_at_session_end",  True)
-    settings.setdefault("max_trades_us_cont",          10)
+    settings.setdefault("max_trades_us_cont",          4)
     settings.setdefault("friday_cutoff_hour_sgt",     23)
     settings.setdefault("friday_cutoff_minute_sgt",   0)
     settings.setdefault("news_lookahead_min",         120)
@@ -241,11 +241,11 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("atr_period",                 14)
     settings.setdefault("m5_candle_count",            40)
     settings.setdefault("spread_limits",              {"London": 5, "US": 5, "US_Cont": 5, "Tokyo": 4})
-    settings.setdefault("max_trades_day",             20)
-    settings.setdefault("max_losing_trades_day",      8)
-    settings.setdefault("max_trades_london",          10)
-    settings.setdefault("max_trades_us",              10)
-    settings.setdefault("max_trades_us_cont",         10)
+    settings.setdefault("max_trades_day",             12)
+    settings.setdefault("max_losing_trades_day",      4)
+    settings.setdefault("max_trades_london",          4)
+    settings.setdefault("max_trades_us",              4)
+    settings.setdefault("max_trades_us_cont",         4)
     # session window hours
     settings.setdefault("london_session_start_hour",  16)
     settings.setdefault("london_session_end_hour",    20)
@@ -264,7 +264,7 @@ def validate_settings(settings: dict) -> dict:
     # Tokyo/Asian session
     settings.setdefault("tokyo_session_start_hour",    8)
     settings.setdefault("tokyo_session_end_hour",     15)
-    settings.setdefault("max_trades_tokyo",           10)
+    settings.setdefault("max_trades_tokyo",           4)
     # global concurrent-trade cap (0 = per-pair limits only)
     settings.setdefault("max_total_open_trades",       1)
     # TP2 reference RR multiplier for the trade opened Telegram alert
@@ -363,10 +363,10 @@ def get_window_key(session_name: str | None) -> str | None:
 
 
 def get_window_trade_cap(window_key: str | None, settings: dict) -> int | None:
-    if window_key == "London": return int(settings.get("max_trades_london", 10))
-    if window_key == "US":      return int(settings.get("max_trades_us",      10))
-    if window_key == "US_Cont": return int(settings.get("max_trades_us_cont", 10))
-    if window_key == "Tokyo":  return int(settings.get("max_trades_tokyo",  10))
+    if window_key == "London": return int(settings.get("max_trades_london", 4))
+    if window_key == "US":      return int(settings.get("max_trades_us",      4))
+    if window_key == "US_Cont": return int(settings.get("max_trades_us_cont", 4))
+    if window_key == "Tokyo":  return int(settings.get("max_trades_tokyo",  4))
     return None
 
 
@@ -1043,7 +1043,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
                 cooldown_until_sgt=cooldown_started_until.strftime("%H:%M"),
                 session_name=_cd_sess,
                 day_losses=_cd_losses,
-                day_limit=int(settings.get("max_losing_trades_day", 8)),
+                day_limit=int(settings.get("max_losing_trades_day", 4)),
             ), instrument)
         log_event("COOLDOWN_STARTED",
                   f"[{instrument.replace('_', '/')}] Cooldown until "
@@ -1166,7 +1166,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
     # ── Early cap guards (no OANDA call needed) ────────────────────────────
     _dp_pre, _dt_pre, _dl_pre = daily_totals(history, today, instrument=instrument)
 
-    _max_day_losses = int(settings.get("max_losing_trades_day", 8))
+    _max_day_losses = int(settings.get("max_losing_trades_day", 4))
     if _max_day_losses > 0 and _dl_pre >= _max_day_losses:
         msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] Daily loss cap ({_dl_pre}/{_max_day_losses}) — "
                f"no new entries today.")
@@ -1179,7 +1179,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
                                  "losses": _dl_pre, "cap": _max_day_losses})
         return None
 
-    _max_day_trades = int(settings.get("max_trades_day", 20))
+    _max_day_trades = int(settings.get("max_trades_day", 12))
     if _max_day_trades > 0 and _dt_pre >= _max_day_trades:
         msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] Daily trade cap ({_dt_pre}/{_max_day_trades}) — "
                f"no new entries today.")
@@ -1211,7 +1211,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
             return None
 
     if macro:
-        _sl_cap  = int(settings.get("max_losing_trades_session", 4))
+        _sl_cap  = int(settings.get("max_losing_trades_session", 2))
         _sl_sess = session_losses(history, today, macro, instrument)
         if _sl_cap > 0 and _sl_sess >= _sl_cap:
             msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] {session or macro} session loss cap "

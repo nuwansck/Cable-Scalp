@@ -71,7 +71,7 @@ All times SGT (UTC+8):
 | Tokyo | 08:00–15:59 | ≥ 5/6 | 10 |
 | London | 16:00–20:59 | ≥ 4/6 | 10 |
 | US session      | 21:00–23:59 | **DISABLED**  | —  |
-| US Continuation | 00:00–03:59 | ≥ 4/6         | 10 |
+| US Continuation | 00:00–03:59 | ≥ 4/6         | 4 |
 
 Market fully closed Saturday and Sunday. Monday opens at 08:00 SGT.
 

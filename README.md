@@ -58,10 +58,10 @@ All times SGT (UTC+8):
 
 ```
 ✈️  04:00–07:59  Dead zone       No new entries (pre-Tokyo gap)
-🗼 08:00–15:59  Tokyo           score ≥ 5/6  cap 10
-🇬🇧 16:00–20:59  London          score ≥ 4/6  cap 10
+🗼 08:00–15:59  Tokyo           score ≥ 5/6  cap 4
+🇬🇧 16:00–20:59  London          score ≥ 4/6  cap 4
 🚫 21:00–23:59  US session      DISABLED (10% WR — 1W/9L live data)
-🌙 00:00–03:59  US Cont.       score ≥ 4/6  cap 10
+🌙 00:00–03:59  US Cont.       score ≥ 4/6  cap 4
 ```
 
 Day reset: 08:00 SGT. Global cap: 1 open trade simultaneously.
@@ -75,8 +75,8 @@ Market closed: Saturday and Sunday.
 |---|---|---|
 | `position_full_usd` | $60 | 2.4% of $2,000 account (max margin) |
 | `position_partial_usd` | $45 | 1.5% of $2,000 account |
-| `max_total_open_trades` | 2 | Hard cap across all pairs |
-| `max_losing_trades_day` | 8 | Bot pauses until 08:00 SGT |
+| `max_total_open_trades` | 1 | Hard cap across all pairs |
+| `max_losing_trades_day` | 4 | Bot pauses until 08:00 SGT |
 | `min_trade_units` | 1,000 | Reject margin-adjusted micro-orders |
 
 SL/TP (GBP/USD):

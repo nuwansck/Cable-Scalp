@@ -1,5 +1,12 @@
 # Cable Scalp — Changelog
 
+## v2.2.1 — End-to-end cap/default sync
+
+- Runtime Telegram startup labels are fully settings-driven for session caps and loss cap.
+- Synced fallback defaults and settings example to active v2.2 values: session caps 4, daily trade cap 12, daily loss cap 4, session loss cap 2.
+- Kept US session and US_Cont separately identifiable across logic, logs, reports, and Telegram.
+
+
 ---
 
 ## v2.1.0 — 2026-04-30

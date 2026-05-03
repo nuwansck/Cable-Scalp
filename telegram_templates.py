@@ -403,7 +403,7 @@ def msg_friday_cutoff(cutoff_hour_sgt) -> str:
 
 def msg_startup(
     version, mode, balance, min_score, cycle_minutes=5,
-    max_trades_london=10, max_trades_us=10, max_trades_us_cont=10, max_trades_tokyo=10,
+    max_trades_london=4, max_trades_us=4, max_trades_us_cont=4, max_trades_tokyo=4,
     max_losing_day=8, trading_day_start_hour=8,
     us_early_end=3, dead_zone_start=4, dead_zone_end=7,
     tokyo_start=8, tokyo_end=15, london_start=16, london_end=20,

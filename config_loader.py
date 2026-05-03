@@ -129,12 +129,12 @@ def load_settings() -> dict:
 
     # ── Persistent defaults — applied on startup if not in volume settings ───
     settings.setdefault('spread_limits', {'London': 4, 'US': 5, 'US_Cont': 5, 'Tokyo': 4})
-    settings.setdefault('max_trades_day', 20)
-    settings.setdefault('max_losing_trades_day', 8)
-    settings.setdefault('max_trades_london', 10)
-    settings.setdefault('max_trades_us', 10)
-    settings.setdefault('max_trades_us_cont', 10)
-    settings.setdefault('max_losing_trades_session', 4)
+    settings.setdefault('max_trades_day', 12)
+    settings.setdefault('max_losing_trades_day', 4)
+    settings.setdefault('max_trades_london', 4)
+    settings.setdefault('max_trades_us', 4)
+    settings.setdefault('max_trades_us_cont', 4)
+    settings.setdefault('max_losing_trades_session', 2)
     # Signal engine
     settings.setdefault('orb_fresh_minutes',         60)
     settings.setdefault('orb_aging_minutes',         120)
@@ -168,14 +168,14 @@ def load_settings() -> dict:
     # Tokyo session
     settings.setdefault('tokyo_session_start_hour',   8)
     settings.setdefault('tokyo_session_end_hour',    15)
-    settings.setdefault('max_trades_tokyo',          10)
+    settings.setdefault('max_trades_tokyo',          4)
     # Global concurrent-trade cap
     settings.setdefault('max_total_open_trades',      1)
     # TP2 reference multiplier shown in trade opened Telegram alert
     settings.setdefault('tp2_rr_reference',           3.0)
     # minimum units after margin guard — reject micro-orders gracefully
     settings.setdefault('min_trade_units',           1000)
-    settings.setdefault('telegram_min_score_alert',   3)  # suppress WATCHING below this score
+    settings.setdefault('telegram_min_score_alert',   4)  # suppress WATCHING below this score
     # GBP/USD fixed pip SL/TP — pip_value_usd $10.00 static (USD-quoted pair)
     settings.setdefault('pair_sl_tp', {
         'GBP_USD': {'sl_pips': 18, 'tp_pips': 30, 'pip_value_usd': 10.0, 'be_trigger_pips': 20},
