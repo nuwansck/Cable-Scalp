@@ -1,9 +1,9 @@
 # Cable Scalp — Changelog
 
-## v2.2.1 — End-to-end cap/default sync
+## v2.3.0 — Telegram max wording and docs sync
 
-- Runtime Telegram startup labels are fully settings-driven for session caps and loss cap.
-- Synced fallback defaults and settings example to active v2.2 values: session caps 4, daily trade cap 12, daily loss cap 4, session loss cap 2.
+- Runtime Telegram startup labels are fully settings-driven for session maximums and loss max.
+- Synced fallback defaults and settings example to active v2.3 values: session maximums 4, daily trade max 12, daily loss max 4, session loss max 2.
 - Kept US session and US_Cont separately identifiable across logic, logs, reports, and Telegram.
 
 
@@ -83,7 +83,7 @@ Previously both US session (21:00–23:59) and US Continuation (00:00–03:59) u
 
 v2.0 gives US Continuation its own label:
 - US session → `"US"` (disabled, us_session_start_hour: 99)
-- US Continuation → `"US_Cont"` (enabled, threshold 4/6, cap 10)
+- US Continuation → `"US_Cont"` (enabled, threshold 4/6, max 10)
 
 New setting: `max_trades_us_cont: 10`
 New session threshold key: `session_thresholds.US_Cont: 4`
@@ -298,9 +298,9 @@ Score 0–6/6. Threshold: 4/6 for London and US Cont, 5/6 for Tokyo.
 5. Loss cooldown (consecutive losses → 30min pause)
 6. Friday cutoff (after 23:00 SGT)
 7. Session check (outside active windows)
-8. Daily loss cap (8 losses → pause until 08:00)
-9. Session cap (per-window trade limit)
-10. Concurrent cap (max 2 open across all pairs)
+8. Daily loss max (8 losses → pause until 08:00)
+9. Session max (per-window trade limit)
+10. Concurrent max (max 2 open across all pairs)
 11. Margin guard (auto-reduce units if margin insufficient)
 12. Min units (reject if <1,000 units after margin guard)
 13. Spread guard (skip if spread > session limit)
@@ -460,8 +460,8 @@ Sizing aligned with Fiber Scalp v1.5 — consistent pip value across the Cable/F
 ### Fix — max_total_open_trades corrected to 1
 
 Cable Scalp is single-pair (GBP/USD) with max_concurrent_trades: 1.
-Global cap was 2 — misleading since per-pair cap of 1 always bound first.
-Fixed: `max_total_open_trades: 2 → 1`. Startup card now shows "Global cap: 1 open trade".
+Global max was 2 — misleading since per-pair max of 1 always bound first.
+Fixed: `max_total_open_trades: 2 → 1`. Startup card now shows "Global max: 1 open trade".
 
 ### H1 filter split in weekly and monthly reports
 

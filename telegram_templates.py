@@ -1,4 +1,4 @@
-"""Telegram message templates for Cable Scalp v2.2
+"""Telegram message templates for Cable Scalp v2.3
 AtomicFX-style: clean, state-change only, minimal noise.
 """
 from __future__ import annotations
@@ -37,7 +37,7 @@ def _split_banner(banner: str) -> tuple[str, str]:
     """Extract pair from banner.
     Handles both:
       '🇬🇧 LONDON [GBP/USD]'  → ('🇬🇧 LONDON [GBP/USD]', 'GBP/USD')
-      'Cable Scalp v2.2 | GBP/USD' → ('Cable Scalp v2.2', 'GBP/USD')
+      'Cable Scalp v2.3 | GBP/USD' → ('Cable Scalp v2.3', 'GBP/USD')
     """
     if "[" in banner and "]" in banner:
         pair = banner[banner.index("[")+1 : banner.index("]")]
@@ -276,12 +276,12 @@ def msg_cooldown_started(streak, cooldown_until_sgt, session_name="",
     )
 
 
-# ── 8. Daily cap ──────────────────────────────────────────────────────────────
+# ── 8. Daily max ──────────────────────────────────────────────────────────────
 
 def msg_daily_cap(cap_type, count, limit, window="", daily_pnl=None,
                   session_name="", last_loss_time_sgt="", reset_time_sgt="") -> str:
     label  = ("Max losing trades" if cap_type == "losing_trades"
-              else ("Max trades/day" if cap_type == "total_trades" else f"{window} cap"))
+              else ("Max trades/day" if cap_type == "total_trades" else f"{window} max"))
     footer = "Resuming next trading day" if cap_type in ("losing_trades","total_trades") else "Resuming next window"
     pline  = f"Day P&L: ${daily_pnl:+.2f}\n" if daily_pnl is not None else ""
     rline  = f"Resets:  {reset_time_sgt}\n"   if reset_time_sgt else ""
@@ -307,7 +307,7 @@ def msg_new_day_resume(prev_day_pnl=None, prev_day_trades=0, london_open_sgt="16
     )
 
 
-# ── 8c. Session cap ───────────────────────────────────────────────────────────
+# ── 8c. Session max ───────────────────────────────────────────────────────────
 
 def msg_session_cap(session_name, session_losses, session_limit,
                     day_losses, day_limit, next_session) -> str:
@@ -332,7 +332,7 @@ def msg_session_open(session_name, session_hours_sgt, trade_cap,
     return (
         f"{icon} {session_name} Open  {session_hours_sgt} SGT\n"
         f"{_DIV}\n"
-        f"Today:  {trades_today} trade(s)  {pnl_str}  |  cap {trade_cap}\n"
+        f"Today:  {trades_today} trade(s)  {pnl_str}  |  max {trade_cap}\n"
         f"Scanning for EMA + ORB setups..."
     )
 
@@ -404,7 +404,7 @@ def msg_friday_cutoff(cutoff_hour_sgt) -> str:
 def msg_startup(
     version, mode, balance, min_score, cycle_minutes=5,
     max_trades_london=4, max_trades_us=4, max_trades_us_cont=4, max_trades_tokyo=4,
-    max_losing_day=8, trading_day_start_hour=8,
+    max_losing_day=4, trading_day_start_hour=8,
     us_early_end=3, dead_zone_start=4, dead_zone_end=7,
     tokyo_start=8, tokyo_end=15, london_start=16, london_end=20,
     us_start=21, us_end=23, max_total_open=1,
@@ -429,15 +429,15 @@ def msg_startup(
         f"{_DIV}\n"
         f"Sessions (SGT = UTC+8)\n"
         f"  ✈️  {dead_zone_start:02d}:00–{dead_zone_end:02d}:59  Dead zone\n"
-        f"  🗼 {tokyo_start:02d}:00–{tokyo_end:02d}:59  Tokyo      cap {max_trades_tokyo}  score≥{tok_thr}\n"
-        f"  🇬🇧 {london_start:02d}:00–{london_end:02d}:59  London     cap {max_trades_london}  score≥{lon_thr}\n"
+        f"  🗼 {tokyo_start:02d}:00–{tokyo_end:02d}:59  Tokyo      max {max_trades_tokyo}  score≥{tok_thr}\n"
+        f"  🇬🇧 {london_start:02d}:00–{london_end:02d}:59  London     max {max_trades_london}  score≥{lon_thr}\n"
         + (f"  🚫 21:00–23:59  US session   disabled\n" if us_start >= 99 else
-           f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US session cap {max_trades_us}  score≥{us_thr}\n")
+           f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US session max {max_trades_us}  score≥{us_thr}\n")
         + (f"  🚫 US Cont.    disabled\n" if us_early_end >= 99 else
-           f"  🌙 00:00–{us_early_end:02d}:59  US Cont.   cap {max_trades_us_cont}  score≥{us_cont_thr}\n")
+           f"  🌙 00:00–{us_early_end:02d}:59  US Cont.   max {max_trades_us_cont}  score≥{us_cont_thr}\n")
         + f"{_DIV}\n"
-        + f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss cap: {max_losing_day}/day\n"
-        f"Global cap: {max_total_open} open trades"
+        + f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss max: {max_losing_day}/day\n"
+        f"Global max: {max_total_open} open trades"
     )
 
 

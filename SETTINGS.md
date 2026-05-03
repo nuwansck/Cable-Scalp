@@ -1,4 +1,4 @@
-# Cable Scalp v2.2 — Settings Reference
+# Cable Scalp v2.3 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v2.2` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v2.3` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -32,7 +32,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 | `signal_logging_enabled` | `false` | Enable/disable AI signal data collection. `false` = silent. Flip to `true` to start logging all signal evaluations to `/data/signal_log.csv`. |
 | `max_trade_duration_hours` | `4` | Force-close any open trade after this many hours. Prevents M5 scalp setups becoming overnight swing trades. v2.0: 4 hours. |
 | `force_close_at_session_end` | `true` | Force-close a trade when its originating session ends. London trade closes at 21:00 SGT. Tokyo at 16:00 SGT. US Cont. at 04:00 SGT. |
-| `max_trades_us_cont` | `4` | Trade cap for US Continuation session (00:00–03:59 SGT). Separate from US session cap in v2.0. |
+| `max_trades_us_cont` | `4` | Trade max for US Continuation session (00:00–03:59 SGT). Separate from US session max in v2.0. |
 | `signal_log_min_score` | `3` | Minimum score to capture in signal log. Score 0-2 is pure noise. Score 3+ captures meaningful setups that approached but didn't reach threshold. |
 | `telegram_min_score_alert` | `4` | WATCHING cards below this score are silently suppressed. Set to 4 in v1.8 — score 3 alerts removed (never trade, just noise). London/US Cont. threshold is 4, Tokyo is 5. |
 
@@ -58,22 +58,22 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `position_full_usd` | `120` | Risk in USD for score 5–6 trades. Updated v2.1: $60 → $120. | Score 5–6 → ~20,000 units → **$2.00/pip** | Dollar risk for score 5–6 (full position). |
-| `position_partial_usd` | `90` | Risk in USD for score 4 trades. Updated v2.1: $45 → $90. | Score 4 → ~15,000 units → **$1.50/pip** | Dollar risk for score 4 (partial position). |
-| `min_rr_ratio` | `1.3` | Minimum RR ratio required to place a trade. Updated in v2.0 from 1.6 to 1.3 to match the new 25p TP / 18p SL configuration (actual RR = 1.39×). | Minimum RR — trade blocked if computed RR falls below this. |
+| `position_full_usd` | `120` | Score 5–6 full position setting. |
+| `position_partial_usd` | `90` | Score 4 partial position setting. |
+| `min_rr_ratio` | `1.3` | Minimum RR required to place a trade. With 18p SL / 25p TP, actual fixed RR is about 1.39×. |
 
 ### `pair_sl_tp` — GBP/USD fixed pip values
 
 ```json
 "pair_sl_tp": {
-  "GBP_USD": {"sl_pips": 18, "tp_pips": 30, "pip_value_usd": 10.0, "be_trigger_pips": 20}
+  "GBP_USD": {"sl_pips": 18, "tp_pips": 25, "pip_value_usd": 10.0, "be_trigger_pips": 20}
 }
 ```
 
 | Key | Description |
 |---|---|
 | `sl_pips` | Stop loss in pips. GBP/USD default: 18p. |
-| `tp_pips` | Take profit in pips. GBP/USD default: 30p (1.67× RR). |
+| `tp_pips` | Take profit in pips. GBP/USD default: 25p (about 1.39× RR). |
 | `pip_value_usd` | Dollar value of 1 pip per 100k units. GBP/USD = $10.00 (static). |
 | `be_trigger_pips` | Break-even trigger. SL moves to entry when price travels this many pips. |
 
@@ -81,7 +81,7 @@ GBP/USD SL/TP summary:
 
 | Pair | SL | TP | RR | Break-even WR |
 |---|---|---|---|---|
-| GBP/USD | 18p | 30p | 1.67× | 37.5% |
+| GBP/USD | 18p | 25p | 1.39× | 41.9% |
 
 ---
 
@@ -89,9 +89,9 @@ GBP/USD SL/TP summary:
 
 | Key | Default | Description |
 |---|---|---|
-| `max_total_open_trades` | `1` | Global hard cap — max open trades across all pairs simultaneously. |
+| `max_total_open_trades` | `1` | Global hard max — max open trades across all pairs simultaneously. |
 | `max_concurrent_trades` | `1` | Max open trades per pair. |
-| `max_losing_trades_day` | `4` | Daily loss cap — bot pauses until 08:00 SGT. |
+| `max_losing_trades_day` | `4` | Daily loss max — bot pauses until 08:00 SGT. |
 | `max_trades_day` | `12` | Max trades per trading day. |
 | `max_trades_london` | `4` | Max trades per London window. |
 | `max_trades_us` | `4` | Max trades per US window. |
@@ -119,7 +119,7 @@ GBP/USD SL/TP summary:
 
 | Key | Default | Description |
 |---|---|---|
-| `spread_limits` | `{"London": 4, "US": 5, "Tokyo": 4}` | Max spread in pips per session. GBP/USD typical spread: 1–2p London, 2–4p US. |
+| `spread_limits` | `{"London": 4, "US": 5, "Tokyo": 4, "US_Cont": 5}` | Max spread in pips per session. |
 | `max_spread_pips` | `5` | Global fallback spread limit if session not found. |
 
 ---

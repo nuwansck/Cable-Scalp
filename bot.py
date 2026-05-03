@@ -1,4 +1,4 @@
-"""Main orchestrator for Cable Scalp v2.2 — GBP/USD M5 Scalper
+"""Main orchestrator for Cable Scalp v2.3 — GBP/USD M5 Scalper
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
@@ -133,7 +133,7 @@ def _pip_size(settings: dict) -> float:
 def _pip_dp(pip: float) -> int:
     """Decimal places for price rounding given pip size."""
     if pip <= 0.0001: return 5   # GBP_USD (Cable)
-    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.2)
+    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.3)
     return 2
 
 
@@ -195,7 +195,7 @@ def _signal_payload(**kwargs):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def validate_settings(settings: dict) -> dict:
-    required = ["pairs"]  # Cable Scalp v2.2: pair_sl_tp fixed pips used exclusively
+    required = ["pairs"]  # Cable Scalp v2.3: pair_sl_tp fixed pips used exclusively
     missing  = [k for k in required if k not in settings]
     if missing:
         raise ValueError(f"Missing required settings keys: {missing}")
@@ -1168,7 +1168,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
 
     _max_day_losses = int(settings.get("max_losing_trades_day", 4))
     if _max_day_losses > 0 and _dl_pre >= _max_day_losses:
-        msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] Daily loss cap ({_dl_pre}/{_max_day_losses}) — "
+        msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] Daily loss max ({_dl_pre}/{_max_day_losses}) — "
                f"no new entries today.")
         send_once_per_state(alert, ops, "ops_state",
                             f"day_loss_cap:{today}:{_dl_pre}", msg, instrument)
@@ -1181,7 +1181,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
 
     _max_day_trades = int(settings.get("max_trades_day", 12))
     if _max_day_trades > 0 and _dt_pre >= _max_day_trades:
-        msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] Daily trade cap ({_dt_pre}/{_max_day_trades}) — "
+        msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] Daily trade max ({_dt_pre}/{_max_day_trades}) — "
                f"no new entries today.")
         send_once_per_state(alert, ops, "ops_state",
                             f"day_trade_cap:{today}:{_dt_pre}", msg, instrument)
@@ -1197,7 +1197,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
     if _window_key and _window_cap is not None:
         _wt = window_trade_count(history, today, _window_key, instrument)
         if _wt >= _window_cap:
-            msg = (f"⏸️ [{instrument.replace(chr(95),chr(47))}] {session} cap ({_wt}/{_window_cap}) — "
+            msg = (f"⏸️ [{instrument.replace(chr(95),chr(47))}] {session} max ({_wt}/{_window_cap}) — "
                    f"no more entries this window.")
             send_once_per_state(alert, ops, "window_cap_state",
                                 f"window_cap:{_window_key}:{today}:{_wt}",
@@ -1214,7 +1214,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
         _sl_cap  = int(settings.get("max_losing_trades_session", 2))
         _sl_sess = session_losses(history, today, macro, instrument)
         if _sl_cap > 0 and _sl_sess >= _sl_cap:
-            msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] {session or macro} session loss cap "
+            msg = (f"🛑 [{instrument.replace(chr(95),chr(47))}] {session or macro} session loss max "
                    f"({_sl_sess}/{_sl_cap}) — no more entries.")
             send_once_per_state(alert, ops, "session_loss_cap_state",
                                 f"sess_loss_cap:{macro}:{today}:{_sl_sess}",
@@ -1342,7 +1342,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
             send_once_per_state(
                 alert, ops, "global_cap_state",
                 f"global_cap:{total_open}:{max_total}",
-                f"⏸️ [{instrument.replace(chr(95),chr(47))}] Global trade cap ({total_open}/{max_total} open across all pairs).",
+                f"⏸️ [{instrument.replace(chr(95),chr(47))}] Global trade max ({total_open}/{max_total} open across all pairs).",
                 instrument)
             update_runtime_state(last_cycle_finished=now_sgt.strftime("%Y-%m-%d %H:%M:%S"),
                                  status="SKIPPED_GLOBAL_TRADE_CAP")

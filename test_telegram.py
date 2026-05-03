@@ -1,5 +1,5 @@
 """
-Telegram connection test — Cable Scalp v2.2
+Telegram connection test — Cable Scalp v2.3
 Run: python test_telegram.py
 """
 from telegram_alert import TelegramAlert

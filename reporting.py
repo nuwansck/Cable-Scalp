@@ -1,4 +1,4 @@
-"""reporting.py — Cable Scalp v2.2 Telegram Performance Reports
+"""reporting.py — Cable Scalp v2.3 Telegram Performance Reports
 
 Three scheduled reports, all reading directly from /data/trade_history.json
 on the Railway persistent volume. No archive file needed — the 90-day rolling
@@ -556,7 +556,7 @@ def send_monthly_report() -> None:
 _V16_START = "2026-04-26"
 
 def send_monthly_csv_export() -> None:
-    """Send cumulative CSV of all v2.2 trades on the last day of each month at 08:30 SGT.
+    """Send cumulative CSV of all v2.3 trades on the last day of each month at 08:30 SGT.
 
     The CSV grows every month:
       Apr 30  → April trades only
@@ -677,7 +677,7 @@ def send_monthly_csv_export() -> None:
         period = f"{months[0]} → {months[-1]}" if months else _V16_START
 
         caption = (
-            f"📊 Cable Scalp v2.2 — Cumulative Trade Log\n"
+            f"📊 Cable Scalp v2.3 — Cumulative Trade Log\n"
             f"Period: {period}\n"
             f"Trades: {len(trades)}  ({wins}W / {losses}L)  WR {wr}%\n"
             f"Net P&L: ${net_pnl:+.2f}\n"
@@ -763,7 +763,7 @@ def send_monthly_signal_export() -> None:
 
         filename = f"cable_scalp_v19_signals_to_{now.strftime('%Y-%m-%d')}.csv"
         caption = (
-            f"📡 Cable Scalp v2.2 — Signal Log\n"
+            f"📡 Cable Scalp v2.3 — Signal Log\n"
             f"Period: 2026-04-26 → {now.strftime('%d %b %Y')}\n"
             f"Rows: {total_rows}  |  Fired: {fired}  |  Watched: {watched}  |  Blocked: {blocked}\n"
             f"Generated: {now.strftime('%d %b %Y %H:%M SGT')}"

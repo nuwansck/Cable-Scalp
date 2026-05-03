@@ -1,2 +1,2 @@
-VERSION     = "2.2.0"
-DESCRIPTION = "Cable Scalp v2.2 — US and US_Cont session labels separated across logic, reports, logs, and Telegram"
+VERSION     = "2.3.0"
+DESCRIPTION = "Cable Scalp v2.3 — US and US_Cont session labels separated across logic, reports, logs, and Telegram"

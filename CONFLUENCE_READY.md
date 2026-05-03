@@ -1,6 +1,6 @@
-# Cable Scalp v2.2 — Technical Specification & Operations Wiki
+# Cable Scalp v2.3 — Technical Specification & Operations Wiki
 
-**Bot name:** Cable Scalp v2.2
+**Bot name:** Cable Scalp v2.3
 **Instrument:** GBP/USD (Cable) only
 **Exchange:** OANDA (practice & live)
 **Deployment:** Railway (PaaS)
@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Scope
 
-Cable Scalp v2.2 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+Cable Scalp v2.3 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
 It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
 with minimum score thresholds per session. All configuration lives in `settings.json`.
 
@@ -65,7 +65,7 @@ Three components scored each M5 cycle:
 
 All times SGT (UTC+8):
 
-| Window | SGT | Score threshold | Trade cap |
+| Window | SGT | Score threshold | Trade max |
 |---|---|---|---|
 | Dead zone | 04:00–07:59 | No trading | — |
 | Tokyo | 08:00–15:59 | ≥ 5/6 | 10 |
@@ -106,8 +106,8 @@ Executed in order each cycle, early return on first failure:
 5. **Loss cooldown** — consecutive losses → 30 min pause
 6. **Friday cutoff** — after 23:00 SGT Friday
 7. **Session check** — outside all active windows
-8. **Daily loss cap** — 8 losing trades → pause until 08:00 SGT
-9. **Session cap** — per-window trade limit reached
+8. **Daily loss max** — 8 losing trades → pause until 08:00 SGT
+9. **Session max** — per-window trade limit reached
 10. **Concurrent cap** — 1 trade per pair, 2 globally
 11. **Margin guard** — units reduced if margin insufficient
 12. **Min trade units** — reject if units < 1,000 after margin guard
@@ -155,7 +155,7 @@ Both guards send a Telegram alert with P&L and max pips reached.
 US session (21:00–23:59 SGT) and US Continuation (00:00–03:59 SGT) previously
 shared the same `macro_session: "US"` label. In v2.0 they are separate:
 - US session → `macro_session: "US"` (disabled, sentinel 99)
-- US Continuation → `macro_session: "US_Cont"` (enabled, cap 10, threshold 4)
+- US Continuation → `macro_session: "US_Cont"` (enabled, max 10, threshold 4)
 
 This enables correct per-session reporting in weekly/monthly summaries.
 
