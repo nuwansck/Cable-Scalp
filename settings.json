@@ -92,7 +92,7 @@
   "monthly_report_minute_sgt": 0,
   "tokyo_session_start_hour": 8,
   "tokyo_session_end_hour": 15,
-  "max_trades_tokyo": 10,
+  "max_trades_tokyo": 4,
   "max_total_open_trades": 1,
   "tp2_rr_reference": 3.0,
   "pair_sl_tp": {
@@ -113,5 +113,5 @@
   "signal_log_min_score": 3,
   "max_trade_duration_hours": 4,
   "force_close_at_session_end": true,
-  "max_trades_us_cont": 10
+  "max_trades_us_cont": 4
 }
