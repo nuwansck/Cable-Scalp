@@ -477,7 +477,7 @@ def msg_daily_report(
     islline = f"  ⚡ Instant SL: {isl} trade(s) ≤5min\n" if isl > 0 else ""
     fire  = " 🔥" if day_stats.get("wins", 0) >= 3 else ""
 
-    # Session breakdown (Tokyo / London / US / US Cont)
+    # Session breakdown (Tokyo / London / US / US Cont.)
     sess_block = ""
     if session_stats:
         sess_block = f"{_DIV}\nSession breakdown\n"

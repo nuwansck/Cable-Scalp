@@ -366,7 +366,7 @@ def send_daily_report() -> None:
             ("🗼 Tokyo",   "Tokyo"),
             ("🇬🇧 London", "London"),
             ("🗽 US",      "US"),
-            ("🌙 US Cont", "US_Cont"),
+            ("🌙 US Cont.", "US_Cont"),
         ]
         session_stats = {}
         for label, macro_key in session_order:

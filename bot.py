@@ -2,7 +2,7 @@
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
-Active sessions: London 16–20 SGT (≥4/6), US Cont 00–03 SGT (≥4/6), Tokyo 08–15 SGT (≥5/6)
+Active sessions: London 16–20 SGT (≥4/6), US Cont. 00–03 SGT (≥4/6), Tokyo 08–15 SGT (≥5/6)
 Disabled: US session 21–23 SGT (0% WR in live testing)
 
 All configuration lives in settings.json under the top-level "pairs" key.
@@ -62,7 +62,7 @@ _startup_reconcile_done: bool = False
 SESSION_BANNERS = {
     "London": "🇬🇧 LONDON",
     "US":     "🗽 US",
-    "US_Cont": "🌙 US CONT",
+    "US_Cont": "🌙 US Cont.",
     "Tokyo":  "🗼 TOKYO",
 }
 

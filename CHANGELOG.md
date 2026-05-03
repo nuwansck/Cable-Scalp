@@ -80,7 +80,7 @@ v2.0 gives US Continuation its own label:
 
 New setting: `max_trades_us_cont: 10`
 New session threshold key: `session_thresholds.US_Cont: 4`
-New SESSION_BANNER: `"US_Cont": "🌙 US CONT"`
+New SESSION_BANNER: `"US_Cont": "🌙 US Cont."`
 
 ### MFE tracking
 
