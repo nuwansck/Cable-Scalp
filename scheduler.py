@@ -145,7 +145,7 @@ def main():
     # Avoids re-reading secrets + creating new HTTP sessions every 5 minutes.
     _alert = TelegramAlert()
 
-    logger.info('%s — Scheduler starting', settings.get('bot_name', 'Cable Scalp v2.1'))
+    logger.info('%s — Scheduler starting', settings.get('bot_name', 'Cable Scalp v2.2'))
     logger.info('DATA_DIR : %s', DATA_DIR)
     logger.info('Python   : %s', sys.version.split()[0])
     for warning in run_startup_checks():
@@ -278,7 +278,7 @@ def main():
         _balance = _summary["balance"] if _summary else 0.0
         _threshold = int(settings.get('signal_threshold', 4))
         _mode    = 'DEMO' if settings.get('demo_mode', True) else 'LIVE'
-        _version = settings.get('bot_name', 'Cable Scalp v2.1')
+        _version = settings.get('bot_name', 'Cable Scalp v2.2')
 
         # ── Startup message deduplication ──────────────────────────────────
         # Suppress duplicate startup alerts when Railway restarts the container
@@ -298,6 +298,7 @@ def main():
                 cycle_minutes=int(settings.get('cycle_minutes', 5)),
                 max_trades_london=int(settings.get('max_trades_london', 10)),
                 max_trades_us=int(settings.get('max_trades_us', 10)),
+                max_trades_us_cont=int(settings.get('max_trades_us_cont', 10)),
                 max_trades_tokyo=int(settings.get('max_trades_tokyo', 10)),
                 max_losing_day=int(settings.get('max_losing_trades_day', 8)),
                 trading_day_start_hour=int(settings.get('trading_day_start_hour_sgt', 8)),

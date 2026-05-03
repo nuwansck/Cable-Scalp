@@ -1,8 +1,8 @@
-"""Main orchestrator for Cable Scalp v2.1 — GBP/USD M5 Scalper
+"""Main orchestrator for Cable Scalp v2.2 — GBP/USD M5 Scalper
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
-Active sessions: London 16–20 SGT (≥4/6), US cont 00–03 SGT (≥4/6), Tokyo 08–15 SGT (≥5/6)
+Active sessions: London 16–20 SGT (≥4/6), US Cont 00–03 SGT (≥4/6), Tokyo 08–15 SGT (≥5/6)
 Disabled: US session 21–23 SGT (0% WR in live testing)
 
 All configuration lives in settings.json under the top-level "pairs" key.
@@ -83,8 +83,8 @@ def _build_sessions(settings: dict) -> list:
         ("Tokyo Window",  "Tokyo",  tok_s, tok_e, 5),
         ("London Window", "London", lon_s, lon_e, 4),
     ]
-    if us_s  < 99: sessions.append(("US Window", "US", us_s,  us_e,  4))
-    if us_e2 < 99: sessions.append(("US Window", "US", 0,     us_e2, 3))
+    if us_s  < 99: sessions.append(("US session", "US", us_s,  us_e,  4))
+    if us_e2 < 99: sessions.append(("US Cont.", "US_Cont", 0,     us_e2, 4))
     return sessions
 
 
@@ -133,7 +133,7 @@ def _pip_size(settings: dict) -> float:
 def _pip_dp(pip: float) -> int:
     """Decimal places for price rounding given pip size."""
     if pip <= 0.0001: return 5   # GBP_USD (Cable)
-    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.1)
+    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.2)
     return 2
 
 
@@ -195,7 +195,7 @@ def _signal_payload(**kwargs):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def validate_settings(settings: dict) -> dict:
-    required = ["pairs"]  # Cable Scalp v2.1: pair_sl_tp fixed pips used exclusively
+    required = ["pairs"]  # Cable Scalp v2.2: pair_sl_tp fixed pips used exclusively
     missing  = [k for k in required if k not in settings]
     if missing:
         raise ValueError(f"Missing required settings keys: {missing}")
@@ -240,17 +240,18 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("startup_dedup_seconds",      90)
     settings.setdefault("atr_period",                 14)
     settings.setdefault("m5_candle_count",            40)
-    settings.setdefault("spread_limits",              {"London": 5, "US": 5})
+    settings.setdefault("spread_limits",              {"London": 5, "US": 5, "US_Cont": 5, "Tokyo": 4})
     settings.setdefault("max_trades_day",             20)
     settings.setdefault("max_losing_trades_day",      8)
     settings.setdefault("max_trades_london",          10)
     settings.setdefault("max_trades_us",              10)
+    settings.setdefault("max_trades_us_cont",         10)
     # session window hours
     settings.setdefault("london_session_start_hour",  16)
     settings.setdefault("london_session_end_hour",    20)
     settings.setdefault("us_session_start_hour",      99)  # v1.9: US 21-23 disabled (0% WR)
     settings.setdefault("us_session_end_hour",        99)  # v1.9: US 21-23 disabled
-    settings.setdefault("us_session_early_end_hour",   3)  # v1.9: US cont 00-03 re-enabled
+    settings.setdefault("us_session_early_end_hour",   3)  # v1.9: US Cont 00-03 re-enabled
     settings.setdefault("dead_zone_start_hour",        4)   # 04:00 SGT — pre-Tokyo gap
     settings.setdefault("dead_zone_end_hour",           7)   # 07:59 SGT end
     # report schedule times (SGT)
@@ -280,6 +281,7 @@ def validate_settings(settings: dict) -> dict:
     # Ensure Tokyo threshold is present in session_thresholds
     st = settings.setdefault("session_thresholds", {})
     st.setdefault("Tokyo", 5)
+    st.setdefault("US_Cont", 4)
 
     if int(settings.get("loss_streak_cooldown_min", 30)) < 0:
         raise ValueError("loss_streak_cooldown_min must be >= 0")
@@ -354,7 +356,7 @@ def is_dead_zone_time(now_sgt: datetime, settings: dict | None = None) -> bool:
 
 def get_window_key(session_name: str | None) -> str | None:
     if session_name == "London Window": return "London"
-    if session_name == "US Window":     return "US"
+    if session_name in ("US Window", "US session"): return "US"
     if session_name == "US Cont.":      return "US_Cont"
     if session_name == "Tokyo Window":  return "Tokyo"
     return None
@@ -372,7 +374,7 @@ def window_trade_count(history: list, today_str: str,
                        window_key: str, instrument: str) -> int:
     aliases = {
         "London": {"London", "London Window"},
-        "US":      {"US", "US Window"},
+        "US":      {"US", "US Window", "US session"},
         "US_Cont": {"US_Cont", "US Cont."},
         "Tokyo":  {"Tokyo", "Tokyo Window"},
     }
@@ -390,7 +392,7 @@ def session_losses(history: list, today_str: str,
                    macro: str, instrument: str) -> int:
     aliases = {
         "London": {"London", "London Window"},
-        "US":      {"US", "US Window"},
+        "US":      {"US", "US Window", "US session"},
         "US_Cont": {"US_Cont", "US Cont."},
         "Tokyo":  {"Tokyo", "Tokyo Window"},
     }
@@ -505,7 +507,7 @@ def active_cooldown_until(now_sgt: datetime, instrument: str = ""):
 
 # ── Position sizing ───────────────────────────────────────────────────────────
 
-def compute_sl_usd(levels: dict, settings: dict) -> float:
+def compute_sl_price_dist(levels: dict, settings: dict) -> float:
     """SL price-distance for order placement. pair_sl_tp always provides sl_price_dist."""
     dist = levels.get("sl_price_dist")
     if dist is not None:
@@ -516,21 +518,21 @@ def compute_sl_usd(levels: dict, settings: dict) -> float:
                 return v
         except (TypeError, ValueError):
             pass
-    rec = levels.get("sl_usd_rec")
+    rec = levels.get("sl_price_dist_rec")
     if rec is not None:
         try:
             v = float(rec)
             if v > 0:
-                log.debug("Signal SL (sl_usd_rec): %.6f", v)
+                log.debug("Signal SL (price_dist_rec): %.6f", v)
                 return v
         except (TypeError, ValueError):
             pass
     pip = float(levels.get("pip_size", 0.0001))
-    log.warning("compute_sl_usd: no valid SL in levels — using 18p emergency fallback")
+    log.warning("compute_sl_price_dist: no valid SL in levels — using 18p emergency fallback")
     return round(18 * pip, 7)
 
 
-def compute_tp_usd(levels: dict, sl_usd: float, settings: dict) -> float:
+def compute_tp_price_dist(levels: dict, sl_price_dist: float, settings: dict) -> float:
     """TP price-distance for order placement. pair_sl_tp always provides tp_price_dist."""
     dist = levels.get("tp_price_dist")
     if dist is not None:
@@ -539,32 +541,32 @@ def compute_tp_usd(levels: dict, sl_usd: float, settings: dict) -> float:
             if v > 0: return v
         except (TypeError, ValueError):
             pass
-    rec = levels.get("tp_usd_rec")
+    rec = levels.get("tp_price_dist_rec")
     if rec is not None:
         try:
             v = float(rec)
             if v > 0: return v
         except (TypeError, ValueError):
             pass
-    return round(sl_usd * 1.67, 8)  # 1.67x RR emergency fallback
+    return round(sl_price_dist * 1.67, 8)  # 1.67x RR emergency fallback
 
 
-def derive_rr_ratio(levels: dict, sl_usd: float, tp_usd: float, settings: dict) -> float:
+def derive_rr_ratio(levels: dict, sl_price_dist: float, tp_price_dist: float, settings: dict) -> float:
     try:
         rr = float(levels.get("rr_ratio"))
         if rr > 0: return rr
     except (TypeError, ValueError):
         pass
-    if sl_usd > 0 and tp_usd > 0:
-        return round(tp_usd / sl_usd, 2)
+    if sl_price_dist > 0 and tp_price_dist > 0:
+        return round(tp_price_dist / sl_price_dist, 2)
     return float(settings.get("rr_ratio", 2.5))
 
 
-def calculate_units_from_position(position_usd: int, sl_usd: float) -> float:
+def calculate_units_from_position(position_usd: int, sl_price_dist: float) -> float:
     """units = position_usd / sl_price_distance. Exact USD risk for GBP/USD."""
-    if sl_usd <= 0 or position_usd <= 0:
+    if sl_price_dist <= 0 or position_usd <= 0:
         return 0.0
-    return round(position_usd / sl_usd, 2)
+    return round(position_usd / sl_price_dist, 2)
 
 
 def apply_margin_guard(trader, instrument: str, requested_units: float,
@@ -612,18 +614,18 @@ def apply_margin_guard(trader, instrument: str, requested_units: float,
                          "requested_units": norm_req, "final_units": norm_capped}
 
 
-def compute_sl_tp_pips(sl_usd: float, tp_usd: float, pip_size: float = 0.0001):
+def compute_sl_tp_pips(sl_price_dist: float, tp_price_dist: float, pip_size: float = 0.0001):
     """Convert price-distance SL/TP to pips for the OANDA place_order API."""
-    return round(sl_usd / pip_size), round(tp_usd / pip_size)
+    return round(sl_price_dist / pip_size), round(tp_price_dist / pip_size)
 
 
 def compute_sl_tp_prices(entry: float, direction: str,
-                          sl_usd: float, tp_usd: float,
+                          sl_price_dist: float, tp_price_dist: float,
                           dp: int = 5):
     """Return (sl_price, tp_price) rounded to the correct decimal places."""
     if direction == "BUY":
-        return round(entry - sl_usd, dp), round(entry + tp_usd, dp)
-    return round(entry + sl_usd, dp), round(entry - tp_usd, dp)
+        return round(entry - sl_price_dist, dp), round(entry + tp_price_dist, dp)
+    return round(entry + sl_price_dist, dp), round(entry - tp_price_dist, dp)
 
 
 def get_effective_balance(balance: float | None, settings: dict) -> float:
@@ -832,6 +834,10 @@ def force_close_stale_trades(history: list, trader, alert, settings: dict,
                     reason = f"London session ended — force closing after {elapsed_hours:.1f}h"
                 elif trade_session == "Tokyo" and now_sgt.hour >= 16:
                     reason = f"Tokyo session ended — force closing after {elapsed_hours:.1f}h"
+                elif trade_session == "US":
+                    us_end = int(settings.get("us_session_end_hour", 23))
+                    if now_sgt.date() > open_dt.date() or now_sgt.hour > us_end:
+                        reason = f"US session ended — force closing after {elapsed_hours:.1f}h"
                 elif trade_session == "US_Cont" and now_sgt.hour >= 4:
                     reason = f"US Cont. session ended — force closing after {elapsed_hours:.1f}h"
 
@@ -1098,7 +1104,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
             _tok_s = int(settings.get("tokyo_session_start_hour",   8))
             _tok_e = int(settings.get("tokyo_session_end_hour",    15))
             _hours_map = {
-                "US Window":  f"{_us_s:02d}:00–{_us_e:02d}:59",
+                "US session": f"{_us_s:02d}:00–{_us_e:02d}:59",
                 "US Cont.":   f"00:00–{_us_e2:02d}:59",
                 "London Window": f"{_lon_s:02d}:00–{_lon_e:02d}:59",
                 "Tokyo Window":  f"{_tok_s:02d}:00–{_tok_e:02d}:59",
@@ -1470,15 +1476,15 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
         _, _, ask = trader.get_price(instrument)
         entry = ask or 0
 
-    sl_usd   = compute_sl_usd(levels, settings)
-    tp_usd   = compute_tp_usd(levels, sl_usd, settings)
-    rr_ratio = derive_rr_ratio(levels, sl_usd, tp_usd, settings)
-    units    = calculate_units_from_position(position_usd, sl_usd)
-    tp_pct   = (tp_usd / entry * 100) if entry > 0 else None
+    sl_price_dist = compute_sl_price_dist(levels, settings)
+    tp_price_dist = compute_tp_price_dist(levels, sl_price_dist, settings)
+    rr_ratio = derive_rr_ratio(levels, sl_price_dist, tp_price_dist, settings)
+    units    = calculate_units_from_position(position_usd, sl_price_dist)
+    tp_pct   = (tp_price_dist / entry * 100) if entry > 0 else None
 
     if units <= 0:
         alert.send(msg_error(f"[{instrument.replace('_', '/')}] Position size = 0",
-                             f"position_usd=${position_usd} sl={sl_usd:.6f}"))
+                             f"position_usd=${position_usd} sl={sl_price_dist:.6f}"))
         db.finish_cycle(run_id, status="SKIPPED",
                         summary={"stage": "position_sizing", "reason": "zero_units",
                                  "instrument": instrument})
@@ -1587,8 +1593,8 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
         return None
 
     # stop_pips / tp_pips must use this pair's pip_size for the OANDA order
-    stop_pips, tp_pips = compute_sl_tp_pips(sl_usd, tp_usd, pip)
-    reward_usd = round(units * tp_usd, 6)
+    stop_pips, tp_pips = compute_sl_tp_pips(sl_price_dist, tp_price_dist, pip)
+    reward_usd = round(units * tp_price_dist, 6)
 
     # ── Spread guard ──────────────────────────────────────────────────────────
     mid, bid, ask = trader.get_price(instrument)
@@ -1634,7 +1640,7 @@ def _signal_phase(db, run_id, settings, alert, trader, history,
     ctx.update({
         "score": score, "raw_score": raw_score, "direction": direction,
         "details": details, "levels": levels, "position_usd": position_usd,
-        "entry": entry, "sl_usd": sl_usd, "tp_usd": tp_usd,
+        "entry": entry, "sl_price_dist": sl_price_dist, "tp_price_dist": tp_price_dist,
         "rr_ratio": rr_ratio, "units": units,
         "stop_pips": stop_pips, "tp_pips": tp_pips,
         "reward_usd": reward_usd, "cpr_w": cpr_w,
@@ -1660,8 +1666,8 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
     levels           = ctx["levels"]
     position_usd     = ctx["position_usd"]
     entry            = ctx["entry"]
-    sl_usd           = ctx["sl_usd"]
-    tp_usd           = ctx["tp_usd"]
+    sl_price_dist    = ctx["sl_price_dist"]
+    tp_price_dist    = ctx["tp_price_dist"]
     rr_ratio         = ctx["rr_ratio"]
     units            = ctx["units"]
     stop_pips        = ctx["stop_pips"]
@@ -1690,7 +1696,7 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
                         summary={"stage": "dead_zone_hard_block", "instrument": instrument})
         return
 
-    sl_price, tp_price = compute_sl_tp_prices(entry, direction, sl_usd, tp_usd, dp)
+    sl_price, tp_price = compute_sl_tp_prices(entry, direction, sl_price_dist, tp_price_dist, dp)
 
     record = {
         "timestamp_sgt":        now_sgt.strftime("%Y-%m-%d %H:%M:%S"),
@@ -1713,8 +1719,8 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
         "h1_trend":             levels.get("h1_trend", "UNKNOWN"),
         "h1_aligned":           levels.get("h1_aligned", True),
         "max_pips_reached":     None,
-        "sl_usd":               round(sl_usd, dp + 2),
-        "tp_usd":               round(tp_usd, dp + 2),
+        "sl_price_dist":        round(sl_price_dist, dp + 2),
+        "tp_price_dist":        round(tp_price_dist, dp + 2),
         "pip_size":             pip,
         "estimated_risk_usd":   round(position_usd, 2),
         "estimated_reward_usd": round(reward_usd, 6),
@@ -1766,7 +1772,7 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
                     result = retry_result
                     units  = retry_units
                     record["size"] = units
-                    record["estimated_reward_usd"] = round(units * tp_usd, 6)
+                    record["estimated_reward_usd"] = round(units * tp_price_dist, 6)
 
         if not result.get("success"):
             alert.send(msg_order_failed(
@@ -1787,16 +1793,16 @@ def _execution_phase(db, run_id, settings, alert, trader, history,
             ae                     = fill_price
             record["entry"]        = round(ae, dp)
             record["signal_entry"] = round(entry, dp)
-            record["sl_price"]     = round(ae - sl_usd if direction == "BUY"
-                                           else ae + sl_usd, dp)
-            record["tp_price"]     = round(ae + tp_usd if direction == "BUY"
-                                           else ae - tp_usd, dp)
+            record["sl_price"]     = round(ae - sl_price_dist if direction == "BUY"
+                                           else ae + sl_price_dist, dp)
+            record["tp_price"]     = round(ae + tp_price_dist if direction == "BUY"
+                                           else ae - tp_price_dist, dp)
 
         alert.send(msg_trade_opened(
             banner=banner, direction=direction, setup=levels.get("setup", ""),
             session=session, fill_price=record["entry"], signal_price=entry,
             sl_price=record["sl_price"], tp_price=record["tp_price"],
-            sl_usd=sl_usd, tp_usd=tp_usd, units=units, position_usd=position_usd,
+            sl_price_dist=sl_price_dist, tp_price_dist=tp_price_dist, units=units, position_usd=position_usd,
             rr_ratio=rr_ratio, cpr_width_pct=cpr_w, spread_pips=spread_pips,
             score=score, balance=eff_balance, demo=demo,
             news_penalty=news_penalty, raw_score=raw_score,

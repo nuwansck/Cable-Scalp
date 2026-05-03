@@ -1,4 +1,4 @@
-"""Signal engine for EMA crossover + ORB scalping — Cable Scalp v2.1
+"""Signal engine for EMA crossover + ORB scalping — Cable Scalp v2.2
 
 Dedicated to GBP/USD (Cable).
 instrument is passed explicitly to analyze(); no pair is hard-coded.
@@ -23,7 +23,7 @@ Key per-pair settings used here: pair_sl_tp (sl_pips, tp_pips, pip_value_usd).
 
 ORB cache key includes instrument so each pair has its own ORB per session.
 
-v2.1: GBP/USD only. pip_value_usd is static $10.00 (standard for USD-quoted pairs).
+v2.2: GBP/USD only. pip_value_usd is static $10.00 (standard for USD-quoted pairs).
 GBP/USD uses static $10.00/pip (standard for USD-quoted pairs).
 """
 
@@ -56,9 +56,10 @@ ORB_AGING_MINUTES = 120
 # Configurable via settings.json: london_session_start_hour, us_session_start_hour,
 # tokyo_session_start_hour.
 _DEFAULT_ORB_HOURS = {
-    "London": (16, 0),
-    "US":     (21, 0),
-    "Tokyo":  ( 8, 0),
+    "London":  (16, 0),
+    "US":      (21, 0),
+    "US_Cont": (0, 0),
+    "Tokyo":   ( 8, 0),
 }
 
 def _build_orb_sessions(settings: dict | None = None) -> dict:
@@ -66,13 +67,16 @@ def _build_orb_sessions(settings: dict | None = None) -> dict:
     US excluded when us_session_start_hour >= 99 (disabled sentinel).
     """
     s = settings or {}
-    us_h = int(s.get("us_session_start_hour", 21))
+    us_h  = int(s.get("us_session_start_hour", 21))
+    us_e2 = int(s.get("us_session_early_end_hour", 3))
     sessions = {
         "London": (int(s.get("london_session_start_hour", 16)), 0),
         "Tokyo":  (int(s.get("tokyo_session_start_hour",   8)), 0),
     }
     if us_h < 99:
         sessions["US"] = (us_h, 0)
+    if us_e2 < 99:
+        sessions["US_Cont"] = (0, 0)
     return sessions
 
 
@@ -111,7 +115,7 @@ def _price_dp(pip_size: float) -> int:
     if pip_size <= 0.0001:
         return 5   # GBP_USD (e.g. 1.27345) — Cable
     if pip_size <= 0.01:
-        return 3   # JPY pairs (not used in Cable Scalp v2.1)
+        return 3   # JPY pairs (not used in Cable Scalp v2.2)
     return 2       # fallback
 
 
@@ -133,7 +137,7 @@ class SignalEngine:
         """Run the Cable Scalp EMA + ORB (time-decayed) + CPR-bias scoring engine.
 
         Args:
-            instrument: OANDA instrument code (GBP_USD for Cable Scalp v2.1)
+            instrument: OANDA instrument code (GBP_USD for Cable Scalp v2.2)
             settings:   merged (global + pair-specific) settings dict
 
         Returns:
@@ -321,9 +325,11 @@ class SignalEngine:
         position_usd = score_to_position_usd(score, settings)
 
         # -- 7. Scalp SL/TP ---------------------------------------------------
-        # sl_usd_rec / tp_usd_rec are PRICE DISTANCES (not dollar P&L amounts).
-        #   e.g. GBP_USD sl_pips=18, pip_size=0.0001 -> sl_price_dist=0.0018
-        #   units = position_usd / sl_price_dist -> exact USD risk for GBP/USD.
+        # Fixed pip SL/TP uses two clearly named values:
+        #   1) sl_price_dist / tp_price_dist = price distance for order placement
+        #      e.g. GBP_USD sl_pips=20, pip_size=0.0001 -> sl_price_dist=0.0020
+        #   2) sl_risk_per_unit_usd / tp_reward_per_unit_usd = USD value per unit for sizing/R:R
+        #      units = position_usd / sl_risk_per_unit_usd -> target USD risk for USD-quoted pairs.
         # pair_sl_tp fixed pips always used; percentage fallback unreachable.
         entry = current_close
 
@@ -334,24 +340,23 @@ class SignalEngine:
             # Fixed pip mode -- pair-specific SL and TP
             # pip_value_usd: dollar value of 1 pip for 1 standard lot (100k units).
             # GBP/USD = $10.00 (standard for USD-quoted pairs).
-            # sl_usd_rec per unit = sl_pips * (pip_value_usd / 100_000)
-            # This gives units = position_usd / sl_usd_rec -> exact USD risk for GBP/USD.
+            # sl_risk_per_unit_usd = sl_pips * (pip_value_usd / 100_000)
+            # This gives units = position_usd / sl_risk_per_unit_usd -> target USD risk for GBP/USD.
             _sl_pips_fixed  = int(_pair_cfg["sl_pips"])
             _tp_pips_fixed  = int(_pair_cfg["tp_pips"])
             # pip_value_usd: static $10.00 for GBP/USD
             _pip_val_usd    = self._get_pip_value_usd(instrument, current_close, _pair_cfg)
             _pip_usd_unit   = _pip_val_usd / 100_000   # $ per unit per pip (for sizing)
-            # sl_usd_rec  = dollar risk per unit — used by calculate_units_from_position
-            # sl_price_dist = price distance in quote currency — used for SL/TP price placement
-            sl_usd_rec  = round(_sl_pips_fixed * _pip_usd_unit, _dp + 2)
-            tp_usd_rec  = round(_tp_pips_fixed * _pip_usd_unit, _dp + 2)
+            # USD risk/reward per unit — used for position sizing and R:R calculation
+            sl_risk_per_unit_usd     = round(_sl_pips_fixed * _pip_usd_unit, _dp + 2)
+            tp_reward_per_unit_usd   = round(_tp_pips_fixed * _pip_usd_unit, _dp + 2)
             # Price distances use pip_size * sl_pips
             levels["sl_price_dist"] = round(_sl_pips_fixed * _pip_size, _dp + 2)
             levels["tp_price_dist"] = round(_tp_pips_fixed * _pip_size, _dp + 2)
             sl_source   = "fixed_pips"
             tp_source   = "fixed_pips"
 
-        rr_ratio = (tp_usd_rec / sl_usd_rec) if sl_usd_rec > 0 else 0
+        rr_ratio = (tp_reward_per_unit_usd / sl_risk_per_unit_usd) if sl_risk_per_unit_usd > 0 else 0
         _min_rr  = float((settings or {}).get("min_rr_ratio", 1.6))
         rr_skip  = rr_ratio < _min_rr
         blockers = []
@@ -359,8 +364,8 @@ class SignalEngine:
             blockers.append("R:R {:.2f} < 1:{:.1f}".format(rr_ratio, _min_rr))
 
         # Pips for display only
-        sl_pips = round(sl_usd_rec / _pip_size)
-        tp_pips = round(tp_usd_rec / _pip_size)
+        sl_pips = _sl_pips_fixed
+        tp_pips = _tp_pips_fixed
 
         # -- 8. Levels dict ---------------------------------------------------
         # -- H1 trend filter ------------------------------------------------
@@ -382,10 +387,10 @@ class SignalEngine:
         levels["position_usd"] = position_usd
         levels["entry"]        = round(entry, _dp)
         levels["setup"]        = setup
-        levels["sl_usd_rec"]   = sl_usd_rec
+        levels["sl_risk_per_unit_usd"] = sl_risk_per_unit_usd
         levels["sl_source"]    = sl_source
         levels["sl_pips"]      = sl_pips
-        levels["tp_usd_rec"]   = tp_usd_rec
+        levels["tp_reward_per_unit_usd"] = tp_reward_per_unit_usd
         levels["tp_source"]    = tp_source
         levels["tp_pips"]      = tp_pips
         levels["rr_ratio"]     = round(rr_ratio, 2)
@@ -402,7 +407,7 @@ class SignalEngine:
         reasons.append(
             ("SL=" + sl_fmt + " ({src} {pips}pip) | TP=" + sl_fmt +
              " ({tsrc} {tlbl}, {tpips}pip) | R:R 1:{rr:.1f}").format(
-                sl_usd_rec, tp_usd_rec,
+                levels["sl_price_dist"], levels["tp_price_dist"],
                 src=sl_source, pips=sl_pips,
                 tsrc=tp_source, tlbl=_tp_label, tpips=tp_pips, rr=rr_ratio,
             )
@@ -479,8 +484,8 @@ class SignalEngine:
         us_h  = int(s.get("us_session_start_hour",      21))
         us_e  = int(s.get("us_session_end_hour",        23))
         us_e2 = int(s.get("us_session_early_end_hour",   3))
-        if us_h  < 99 and us_h <= h <= us_e:  return "US"   # late: 21–23
-        if us_e2 < 99 and 0    <= h <= us_e2: return "US"   # early: 00–03
+        if us_h  < 99 and us_h <= h <= us_e:  return "US"        # late: 21–23
+        if us_e2 < 99 and 0    <= h <= us_e2: return "US_Cont"   # continuation: 00–03
         if tok_h <= h <= tok_e: return "Tokyo"
         return None
 
@@ -547,7 +552,7 @@ class SignalEngine:
                            pair_cfg: dict) -> float:
         """Return pip_value_usd. GBP/USD = static $10.00 per pip per 100k units.
 
-        JPY dynamic logic removed in v2.1 — Cable Scalp is GBP/USD only.
+        JPY dynamic logic removed in v2.2 — Cable Scalp is GBP/USD only.
         """
         return float(pair_cfg.get("pip_value_usd", 10.0))
 

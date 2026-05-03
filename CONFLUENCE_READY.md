@@ -1,6 +1,6 @@
-# Cable Scalp v2.1 — Technical Specification & Operations Wiki
+# Cable Scalp v2.2 — Technical Specification & Operations Wiki
 
-**Bot name:** Cable Scalp v2.1
+**Bot name:** Cable Scalp v2.2
 **Instrument:** GBP/USD (Cable) only
 **Exchange:** OANDA (practice & live)
 **Deployment:** Railway (PaaS)
@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Scope
 
-Cable Scalp v2.1 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+Cable Scalp v2.2 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
 It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
 with minimum score thresholds per session. All configuration lives in `settings.json`.
 
@@ -72,7 +72,6 @@ All times SGT (UTC+8):
 | London | 16:00–20:59 | ≥ 4/6 | 10 |
 | US session      | 21:00–23:59 | **DISABLED**  | —  |
 | US Continuation | 00:00–03:59 | ≥ 4/6         | 10 |
-| US continuation | 00:00–03:59 | ≥ 4/6 | 10 |
 
 Market fully closed Saturday and Sunday. Monday opens at 08:00 SGT.
 
@@ -80,7 +79,7 @@ Market fully closed Saturday and Sunday. Monday opens at 08:00 SGT.
 
 ## 5. Position Sizing
 
-Units calculated from `position_usd ÷ sl_usd_rec` per unit.
+Units calculated from `position_usd ÷ sl_risk_per_unit_usd` per unit.
 GBP/USD uses static `pip_value_usd = $10.00` (standard for USD-quoted pairs).
 
 | Score | Position | Risk | Units (GBP/USD 18p SL) |
@@ -147,7 +146,7 @@ Reason: M5 signal context (ORB age, EMA cross) is stale after 4 hours.
 A trade is force-closed when its originating session ends:
 - London trade → closes at 21:00 SGT
 - Tokyo trade → closes at 16:00 SGT
-- US Cont trade → closes at 04:00 SGT
+- US Cont. trade → closes at 04:00 SGT
 
 Both guards send a Telegram alert with P&L and max pips reached.
 

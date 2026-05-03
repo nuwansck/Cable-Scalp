@@ -1,4 +1,4 @@
-# Cable Scalp v2.1 — Settings Reference
+# Cable Scalp v2.2 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v2.1` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v2.2` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -19,8 +19,8 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `signal_threshold` | `4` | Minimum score to place a trade (London / US cont). |
-| `session_thresholds` | `{"London": 4, "US": 4, "Tokyo": 5}` | Per-session override. Tokyo is stricter (5/6) — GBP/USD is quieter in Asian hours. |
+| `signal_threshold` | `4` | Minimum score to place a trade (London / US Cont.). |
+| `session_thresholds` | `{"London": 4, "US": 4, "US_Cont": 4, "Tokyo": 5}` | Per-session override. Tokyo is stricter (5/6) — GBP/USD is quieter in Asian hours. |
 | `ema_fast_period` | `9` | Fast EMA period (M5). |
 | `ema_slow_period` | `21` | Slow EMA period (M5). |
 | `orb_fresh_minutes` | `60` | ORB break within this many minutes = +2 pts (fresh). |
@@ -31,10 +31,10 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 | `atr_period` | `14` | ATR calculation period. |
 | `signal_logging_enabled` | `false` | Enable/disable AI signal data collection. `false` = silent. Flip to `true` to start logging all signal evaluations to `/data/signal_log.csv`. |
 | `max_trade_duration_hours` | `4` | Force-close any open trade after this many hours. Prevents M5 scalp setups becoming overnight swing trades. v2.0: 4 hours. |
-| `force_close_at_session_end` | `true` | Force-close a trade when its originating session ends. London trade closes at 21:00 SGT. Tokyo at 16:00 SGT. US Cont at 04:00 SGT. |
+| `force_close_at_session_end` | `true` | Force-close a trade when its originating session ends. London trade closes at 21:00 SGT. Tokyo at 16:00 SGT. US Cont. at 04:00 SGT. |
 | `max_trades_us_cont` | `10` | Trade cap for US Continuation session (00:00–03:59 SGT). Separate from US session cap in v2.0. |
 | `signal_log_min_score` | `3` | Minimum score to capture in signal log. Score 0-2 is pure noise. Score 3+ captures meaningful setups that approached but didn't reach threshold. |
-| `telegram_min_score_alert` | `4` | WATCHING cards below this score are silently suppressed. Set to 4 in v1.8 — score 3 alerts removed (never trade, just noise). London/US cont threshold is 4, Tokyo is 5. |
+| `telegram_min_score_alert` | `4` | WATCHING cards below this score are silently suppressed. Set to 4 in v1.8 — score 3 alerts removed (never trade, just noise). London/US Cont. threshold is 4, Tokyo is 5. |
 
 ---
 
@@ -48,7 +48,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 | `london_session_end_hour` | `20` | London close (SGT). |
 | `us_session_start_hour` | `99` | US session open. `99` = disabled. **Disabled in v1.6** (10% WR live data). |
 | `us_session_end_hour` | `99` | US session close. `99` = disabled. **Disabled in v1.6**. |
-| `us_session_early_end_hour` | `3` | US continuation close hour (SGT). `3` = window is 00:00–03:59. Set to `-1` to disable. |
+| `us_session_early_end_hour` | `3` | US Continuation close hour (SGT). `3` = window is 00:00–03:59. Set to `-1` to disable. |
 | `dead_zone_start_hour` | `4` | Dead zone start (SGT) — no new entries. |
 | `dead_zone_end_hour` | `7` | Dead zone end (SGT). |
 

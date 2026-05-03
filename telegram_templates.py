@@ -1,4 +1,4 @@
-"""Telegram message templates for Cable Scalp v2.1
+"""Telegram message templates for Cable Scalp v2.2
 AtomicFX-style: clean, state-change only, minimal noise.
 """
 from __future__ import annotations
@@ -37,7 +37,7 @@ def _split_banner(banner: str) -> tuple[str, str]:
     """Extract pair from banner.
     Handles both:
       '🇬🇧 LONDON [GBP/USD]'  → ('🇬🇧 LONDON [GBP/USD]', 'GBP/USD')
-      'Cable Scalp v2.1 | GBP/USD' → ('Cable Scalp v2.1', 'GBP/USD')
+      'Cable Scalp v2.2 | GBP/USD' → ('Cable Scalp v2.2', 'GBP/USD')
     """
     if "[" in banner and "]" in banner:
         pair = banner[banner.index("[")+1 : banner.index("]")]
@@ -52,7 +52,9 @@ def _clean_pair(s: str) -> str:
 
 def _clean_session(s: str) -> str:
     mapping = {
-        "US Window":     "US Window",
+        "US":            "US session",
+        "US Window":     "US session",
+        "US session":    "US session",
         "US Cont.":      "US Cont.",
         "US_Cont":       "US Cont.",
         "London Window": "London Window",
@@ -142,7 +144,7 @@ def msg_signal_update(
 
 def msg_trade_opened(
     banner, direction, setup, session, fill_price, signal_price,
-    sl_price, tp_price, sl_usd, tp_usd, units, position_usd,
+    sl_price, tp_price, sl_price_dist, tp_price_dist, units, position_usd,
     rr_ratio, cpr_width_pct, spread_pips, score, balance, demo,
     news_penalty=0, raw_score=None, free_margin=None,
     required_margin=None, margin_mode="NORMAL", margin_usage_pct=None,
@@ -160,12 +162,12 @@ def msg_trade_opened(
         s_str += f" (raw {raw_score})"
 
     pip = _ps(price_dp)
-    sl_p  = round(sl_usd / pip)
-    tp_p  = round(tp_usd / pip)
-    tp2_p = round(sl_usd * tp2_rr / pip)
+    sl_p  = round(sl_price_dist / pip)
+    tp_p  = round(tp_price_dist / pip)
+    tp2_p = round(sl_price_dist * tp2_rr / pip)
     tp2_price = round(
-        fill_price + sl_usd * tp2_rr if direction == "BUY"
-        else fill_price - sl_usd * tp2_rr, price_dp
+        fill_price + sl_price_dist * tp2_rr if direction == "BUY"
+        else fill_price - sl_price_dist * tp2_rr, price_dp
     )
     units_fmt = f"{int(units):,}" if units >= 1000 else str(int(units))
 
@@ -401,7 +403,7 @@ def msg_friday_cutoff(cutoff_hour_sgt) -> str:
 
 def msg_startup(
     version, mode, balance, min_score, cycle_minutes=5,
-    max_trades_london=10, max_trades_us=10, max_trades_tokyo=10,
+    max_trades_london=10, max_trades_us=10, max_trades_us_cont=10, max_trades_tokyo=10,
     max_losing_day=8, trading_day_start_hour=8,
     us_early_end=3, dead_zone_start=4, dead_zone_end=7,
     tokyo_start=8, tokyo_end=15, london_start=16, london_end=20,
@@ -411,8 +413,9 @@ def msg_startup(
 ) -> str:
     thr     = session_thresholds or {}
     lon_thr = thr.get("London", min_score)
-    us_thr  = thr.get("US",     min_score)
-    tok_thr = thr.get("Tokyo",  min_score + 1)
+    us_thr       = thr.get("US",      min_score)
+    us_cont_thr  = thr.get("US_Cont", min_score)
+    tok_thr      = thr.get("Tokyo",   min_score + 1)
     h1_line = (f"H1 filter: {'✅' if h1_filter_enabled else '⬜'} "
                f"{h1_filter_mode.upper() if h1_filter_enabled else 'OFF'}\n")
     return (
@@ -428,10 +431,10 @@ def msg_startup(
         f"  ✈️  {dead_zone_start:02d}:00–{dead_zone_end:02d}:59  Dead zone\n"
         f"  🗼 {tokyo_start:02d}:00–{tokyo_end:02d}:59  Tokyo      cap {max_trades_tokyo}  score≥{tok_thr}\n"
         f"  🇬🇧 {london_start:02d}:00–{london_end:02d}:59  London     cap {max_trades_london}  score≥{lon_thr}\n"
-        + (f"  🚫 US session   disabled\n" if us_start >= 99 else
-           f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US         cap {max_trades_us}  score≥{us_thr}\n")
-        + (f"  🚫 US cont.    disabled\n" if us_early_end >= 99 else
-           f"  🌙 00:00–{us_early_end:02d}:59  US cont.   cap {max_trades_us}  score≥{us_thr}\n")
+        + (f"  🚫 21:00–23:59  US session   disabled\n" if us_start >= 99 else
+           f"  🗽 {us_start:02d}:00–{us_end:02d}:59  US session cap {max_trades_us}  score≥{us_thr}\n")
+        + (f"  🚫 US Cont.    disabled\n" if us_early_end >= 99 else
+           f"  🌙 00:00–{us_early_end:02d}:59  US Cont.   cap {max_trades_us_cont}  score≥{us_cont_thr}\n")
         + f"{_DIV}\n"
         + f"Day reset: {trading_day_start_hour:02d}:00 SGT  |  Loss cap: {max_losing_day}/day\n"
         f"Global cap: {max_total_open} open trades"
@@ -474,7 +477,7 @@ def msg_daily_report(
     islline = f"  ⚡ Instant SL: {isl} trade(s) ≤5min\n" if isl > 0 else ""
     fire  = " 🔥" if day_stats.get("wins", 0) >= 3 else ""
 
-    # Session breakdown (Tokyo / London / US)
+    # Session breakdown (Tokyo / London / US / US Cont)
     sess_block = ""
     if session_stats:
         sess_block = f"{_DIV}\nSession breakdown\n"

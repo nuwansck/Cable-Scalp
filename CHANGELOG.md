@@ -10,13 +10,13 @@
 `msg_trade_opened`, `msg_order_failed`, `msg_margin_adjustment` were displaying
 the raw OANDA instrument code with underscore. Fixed with `_clean_pair()` helper.
 
-**Problem 2 — "US Window" showing instead of "US Cont."**
-US continuation trades (00:00–03:59 SGT) were labelled "US Window" in trade
+**Problem 2 — "US session" showing instead of "US Cont."**
+US Continuation trades (00:00–03:59 SGT) were labelled "US session" in trade
 open/close messages — same label as the disabled US session. Fixed with
 `_clean_session()` helper that maps "US_Cont" → "US Cont." and adds 🌙 icon.
 
-**Problem 3 — US cont. startup card icon**
-Startup card was showing 🗽 for US cont. Changed to 🌙 to match the new
+**Problem 3 — US Cont. startup card icon**
+Startup card was showing 🗽 for US Cont. Changed to 🌙 to match the new
 US_Cont session label separation introduced in v2.0.
 
 **New helpers added to telegram_templates.py:**
@@ -67,7 +67,7 @@ with P&L and max pips reached.
 Closes trade when its originating session ends:
 - London → 21:00 SGT
 - Tokyo → 16:00 SGT
-- US Cont → 04:00 SGT
+- US Cont. → 04:00 SGT
 
 ### US / US Continuation session label separation
 
@@ -156,7 +156,7 @@ cont is 4/6) and flooded the Telegram chat with noise.
 
 **Impact:**
 - Score 3 WATCHING alerts → silently suppressed ✅
-- Score 4 WATCHING alerts → still shown (London/US cont threshold) ✅
+- Score 4 WATCHING alerts → still shown (London/US Cont. threshold) ✅
 - Score 5+ WATCHING alerts → still shown (Tokyo threshold) ✅
 - All trade open/close/blocked alerts → unchanged ✅
 
@@ -207,7 +207,7 @@ US session (21:00–23:59 SGT) performance:
 
 `us_session_start_hour` and `us_session_end_hour` set to `99` (sentinel disabled).
 `session_thresholds.US` set to `99`. `max_trades_us` set to `0`.
-US continuation (00:00–03:59 SGT) remains **enabled** (78% WR, 7W/2L, +$229).
+US Continuation (00:00–03:59 SGT) remains **enabled** (78% WR, 7W/2L, +$229).
 
 ### H1 filter — upgraded from soft to strict
 
@@ -237,7 +237,7 @@ no order. Estimated savings: ~$243 over the Apr 22–24 period alone.
 | Tokyo | 08:00–15:59 | ≥ 5/6 |
 | London | 16:00–20:59 | ≥ 4/6 |
 | US session | 21:00–23:59 | **Disabled** |
-| US continuation | 00:00–03:59 | ≥ 4/6 |
+| US Continuation | 00:00–03:59 | ≥ 4/6 |
 
 ### Files changed
 `settings.json`, `version.py`, `README.md`, `SETTINGS.md`,
@@ -254,7 +254,7 @@ GBP/USD only. Single pair, clean data, focused execution.
 
 ### Strategy
 EMA 9/21 crossover + Opening Range Breakout (ORB, time-decayed) + CPR daily pivot bias.
-Score 0–6/6. Threshold: 4/6 for London and US cont, 5/6 for Tokyo.
+Score 0–6/6. Threshold: 4/6 for London and US Cont, 5/6 for Tokyo.
 
 ### Active sessions
 
@@ -264,10 +264,10 @@ Score 0–6/6. Threshold: 4/6 for London and US cont, 5/6 for Tokyo.
 | Tokyo | 08:00–15:59 | ≥ 5/6 |
 | London | 16:00–20:59 | ≥ 4/6 |
 | US session | 21:00–23:59 | **Disabled** |
-| US continuation | 00:00–03:59 | ≥ 4/6 |
+| US Continuation | 00:00–03:59 | ≥ 4/6 |
 
 **US session 21–23 disabled:** 0% WR in live testing (5 consecutive losses).
-**US continuation 00–03 active:** 100% WR in live testing (5/5 TPs, +$190.66).
+**US Continuation 00–03 active:** 100% WR in live testing (5/5 TPs, +$190.66).
 
 ### Position sizing
 
@@ -313,7 +313,7 @@ Disabled (`breakeven_enabled: false`). Enable by setting to `true` once
 ### US session re-enabled
 US session (21:00–23:59 SGT) re-enabled for data collection.
 Previous disable was based on 5 trades — insufficient sample for a structural decision.
-Score threshold: ≥ 4/6 (same as London and US continuation).
+Score threshold: ≥ 4/6 (same as London and US Continuation).
 Requires 30–50 trades per window before any session-level conclusions.
 
 ### Enhanced per-session Telegram reporting
@@ -331,7 +331,7 @@ Requires 30–50 trades per window before any session-level conclusions.
 | Tokyo | 08:00–15:59 | ≥ 5/6 |
 | London | 16:00–20:59 | ≥ 4/6 |
 | US session | 21:00–23:59 | ≥ 4/6 ← re-enabled |
-| US continuation | 00:00–03:59 | ≥ 4/6 |
+| US Continuation | 00:00–03:59 | ≥ 4/6 |
 
 ---
 
@@ -420,7 +420,7 @@ Scalp v1.0.1 fix. Health server binds immediately on process start.
 
 ### Fix 3 — Session sentinel guard (`_build_sessions`)
 `_build_sessions()` now excludes US windows when `us_session_start_hour >= 99`.
-Prevents "US Window" session label appearing when US is disabled in future.
+Prevents "US session" session label appearing when US is disabled in future.
 Matches Ninja Scalp v1.1 fix.
 
 ### Fix 4 — ORB sentinel guards (`signals.py`)
@@ -433,8 +433,8 @@ is ever set to disabled. Matches Ninja Scalp v1.0.3 fix.
   (not applicable to fixed-pip `pair_sl_tp` architecture)
 - `bot.py`: `"RF Scalp"` fallback string → `"Cable Scalp"`
 
-### Fix 6 — Telegram US continuation disabled label
-Startup card now shows `🚫 US cont.    disabled` when
+### Fix 6 — Telegram US Continuation disabled label
+Startup card now shows `🚫 US Cont.    disabled` when
 `us_session_early_end_hour >= 99`, consistent with Ninja Scalp v1.1.
 
 ---

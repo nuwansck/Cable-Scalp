@@ -1,5 +1,5 @@
 {
-  "bot_name": "Cable Scalp v2.1",
+  "bot_name": "Cable Scalp v2.2",
   "demo_mode": true,
   "enabled": true,
   "_comment_pairs": "Per-pair settings override any matching global key for that pair's cycle.",
@@ -11,7 +11,8 @@
       "spread_limits": {
         "London": 4,
         "US": 5,
-        "Tokyo": 4
+        "Tokyo": 4,
+        "US_Cont": 5
       },
       "max_concurrent_trades": 1
     }
@@ -39,7 +40,8 @@
   "spread_limits": {
     "London": 4,
     "US": 5,
-    "Tokyo": 4
+    "Tokyo": 4,
+    "US_Cont": 5
   },
   "session_only": true,
   "session_thresholds": {

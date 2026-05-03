@@ -117,7 +117,7 @@ def load_settings() -> dict:
 
     original_keys = set(settings.keys())
 
-    settings.setdefault('bot_name', 'Cable Scalp v1.0')
+    settings.setdefault('bot_name', 'Cable Scalp v2.2')
     settings.setdefault('enabled', True)
     settings.setdefault('cycle_minutes', 5)
     settings.setdefault('db_retention_days', 90)
@@ -128,11 +128,12 @@ def load_settings() -> dict:
     settings.setdefault('calendar_retry_after_min', 15)
 
     # ── Persistent defaults — applied on startup if not in volume settings ───
-    settings.setdefault('spread_limits', {'London': 4, 'US': 5, 'Tokyo': 4})
+    settings.setdefault('spread_limits', {'London': 4, 'US': 5, 'US_Cont': 5, 'Tokyo': 4})
     settings.setdefault('max_trades_day', 20)
     settings.setdefault('max_losing_trades_day', 8)
     settings.setdefault('max_trades_london', 10)
     settings.setdefault('max_trades_us', 10)
+    settings.setdefault('max_trades_us_cont', 10)
     settings.setdefault('max_losing_trades_session', 4)
     # Signal engine
     settings.setdefault('orb_fresh_minutes',         60)
@@ -179,6 +180,15 @@ def load_settings() -> dict:
     settings.setdefault('pair_sl_tp', {
         'GBP_USD': {'sl_pips': 18, 'tp_pips': 30, 'pip_value_usd': 10.0, 'be_trigger_pips': 20},
     })
+
+    # Keep US and US_Cont separately identifiable in config-driven logic.
+    st = settings.setdefault('session_thresholds', {})
+    st.setdefault('London', 4)
+    st.setdefault('US', 4)
+    st.setdefault('US_Cont', 4)
+    st.setdefault('Tokyo', 5)
+    spl = settings.setdefault('spread_limits', {})
+    spl.setdefault('US_Cont', spl.get('US', 5))
 
     if set(settings.keys()) != original_keys:
         _write_json(SETTINGS_FILE, settings)

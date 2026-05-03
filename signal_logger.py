@@ -1,4 +1,4 @@
-"""signal_logger.py — Cable Scalp v2.1
+"""signal_logger.py — Cable Scalp v2.2
 
 Logs every signal evaluation (score >= signal_log_min_score) to
 /data/signal_log.csv for future AI/ML training data collection.
@@ -80,7 +80,7 @@ def log_signal(
     Args:
         score:        Signal score (0–6)
         direction:    BUY | SELL | NONE
-        session:      London | Tokyo | US | None
+        session:      London | Tokyo | US | US_Cont | None
         levels:       Full levels dict from SignalEngine.analyze()
         action:       FIRED | WATCHED | BLOCKED_H1 | BLOCKED_NEWS |
                       BLOCKED_SPREAD | BLOCKED_RR | NOISE

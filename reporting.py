@@ -1,4 +1,4 @@
-"""reporting.py — Cable Scalp v2.1 Telegram Performance Reports
+"""reporting.py — Cable Scalp v2.2 Telegram Performance Reports
 
 Three scheduled reports, all reading directly from /data/trade_history.json
 on the Railway persistent volume. No archive file needed — the 90-day rolling
@@ -303,7 +303,7 @@ def _is_first_monday_of_month(now: datetime) -> bool:
 def send_daily_report() -> None:
     """Send daily performance summary at 04:00 SGT — dead zone start.
 
-    Fires after US continuation closes (03:59 SGT), capturing the full
+    Fires after US Continuation closes (03:59 SGT), capturing the full
     London + US trading day. Covers:
       - Current trading day  (16:00 yesterday → 03:59 today)
       - Session breakdown    (Tokyo / London / US merged)
@@ -360,12 +360,13 @@ def send_daily_report() -> None:
         except Exception:
             pass
 
-        # Session breakdown — group by macro_session field (London / US / Tokyo)
-        # US continuation (00:00-03:59) uses macro="US" so merges automatically
+        # Session breakdown — group by separate macro_session keys.
+        # US and US_Cont are intentionally separate for reporting.
         session_order = [
             ("🗼 Tokyo",   "Tokyo"),
             ("🇬🇧 London", "London"),
             ("🗽 US",      "US"),
+            ("🌙 US Cont", "US_Cont"),
         ]
         session_stats = {}
         for label, macro_key in session_order:
@@ -555,7 +556,7 @@ def send_monthly_report() -> None:
 _V16_START = "2026-04-26"
 
 def send_monthly_csv_export() -> None:
-    """Send cumulative CSV of all v2.1 trades on the last day of each month at 08:30 SGT.
+    """Send cumulative CSV of all v2.2 trades on the last day of each month at 08:30 SGT.
 
     The CSV grows every month:
       Apr 30  → April trades only
@@ -676,7 +677,7 @@ def send_monthly_csv_export() -> None:
         period = f"{months[0]} → {months[-1]}" if months else _V16_START
 
         caption = (
-            f"📊 Cable Scalp v2.1 — Cumulative Trade Log\n"
+            f"📊 Cable Scalp v2.2 — Cumulative Trade Log\n"
             f"Period: {period}\n"
             f"Trades: {len(trades)}  ({wins}W / {losses}L)  WR {wr}%\n"
             f"Net P&L: ${net_pnl:+.2f}\n"
@@ -762,7 +763,7 @@ def send_monthly_signal_export() -> None:
 
         filename = f"cable_scalp_v19_signals_to_{now.strftime('%Y-%m-%d')}.csv"
         caption = (
-            f"📡 Cable Scalp v2.1 — Signal Log\n"
+            f"📡 Cable Scalp v2.2 — Signal Log\n"
             f"Period: 2026-04-26 → {now.strftime('%d %b %Y')}\n"
             f"Rows: {total_rows}  |  Fired: {fired}  |  Watched: {watched}  |  Blocked: {blocked}\n"
             f"Generated: {now.strftime('%d %b %Y %H:%M SGT')}"
