@@ -1,4 +1,4 @@
-"""Main orchestrator for Cable Scalp v2.3 — GBP/USD M5 Scalper
+"""Main orchestrator for Cable Scalp v2.4 — GBP/USD M5 Scalper
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
@@ -133,7 +133,7 @@ def _pip_size(settings: dict) -> float:
 def _pip_dp(pip: float) -> int:
     """Decimal places for price rounding given pip size."""
     if pip <= 0.0001: return 5   # GBP_USD (Cable)
-    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.3)
+    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.4)
     return 2
 
 
@@ -195,7 +195,7 @@ def _signal_payload(**kwargs):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def validate_settings(settings: dict) -> dict:
-    required = ["pairs"]  # Cable Scalp v2.3: pair_sl_tp fixed pips used exclusively
+    required = ["pairs"]  # Cable Scalp v2.4: pair_sl_tp fixed pips used exclusively
     missing  = [k for k in required if k not in settings]
     if missing:
         raise ValueError(f"Missing required settings keys: {missing}")
@@ -228,6 +228,7 @@ def validate_settings(settings: dict) -> dict:
     settings.setdefault("friday_cutoff_minute_sgt",   0)
     settings.setdefault("news_lookahead_min",         120)
     settings.setdefault("news_medium_penalty_score",  -1)
+    settings.setdefault("news_relevant_currencies", ["GBP", "USD"])
     settings.setdefault("loss_streak_cooldown_min",   30)
     settings.setdefault("orb_fresh_minutes",          60)
     settings.setdefault("orb_aging_minutes",          120)
@@ -1137,6 +1138,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
             after_minutes   =int(settings.get("news_block_after_min",     30)),
             lookahead_minutes=int(settings.get("news_lookahead_min",      120)),
             medium_penalty  =int(settings.get("news_medium_penalty_score", -1)),
+            relevant_currencies=settings.get("news_relevant_currencies", ["GBP", "USD"]),
         )
         news_status  = nf.get_status_now()
         blocked      = bool(news_status.get("blocked"))

@@ -1,4 +1,4 @@
-# Cable Scalp v2.3 — Settings Reference
+# Cable Scalp v2.4 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v2.3` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v2.4` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -58,8 +58,8 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `position_full_usd` | `120` | Score 5–6 full position setting. |
-| `position_partial_usd` | `90` | Score 4 partial position setting. |
+| `position_full_usd` | `60` | Score 5–6 full position setting. |
+| `position_partial_usd` | `45` | Score 4 partial position setting. |
 | `min_rr_ratio` | `1.3` | Minimum RR required to place a trade. With 18p SL / 25p TP, actual fixed RR is about 1.39×. |
 
 ### `pair_sl_tp` — GBP/USD fixed pip values

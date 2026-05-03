@@ -15,14 +15,15 @@ DEFAULT_MEDIUM_PENALTY = -1
 
 
 class NewsFilter:
-    """Classify USD/GBP events and decide hard block vs soft penalty.
+    """Classify relevant GBP/USD news and decide hard block vs soft penalty.
 
-    V2.0 logic:
-    - Major events: hard block within configured window
-    - Medium events: no hard block, apply soft score penalty when nearby
-    - Minor/irrelevant events: ignore
+    V2.3 logic:
+    - Relevant currencies are configurable, defaulting to GBP and USD for Cable.
+    - High-impact GBP/USD events: hard block within configured window.
+    - Medium-impact GBP/USD events: soft score penalty when nearby.
+    - Minor/irrelevant currency events: ignore.
 
-    The medium penalty score is now configurable via settings.json
+    The medium penalty score is configurable via settings.json
     (key: news_medium_penalty_score, default: -1).
     """
 
@@ -36,11 +37,13 @@ class NewsFilter:
     ]
 
     def __init__(self, before_minutes: int = 30, after_minutes: int = 30,
-                 lookahead_minutes: int = 120, medium_penalty: int = DEFAULT_MEDIUM_PENALTY):
+                 lookahead_minutes: int = 120, medium_penalty: int = DEFAULT_MEDIUM_PENALTY,
+                 relevant_currencies: list[str] | tuple[str, ...] | set[str] | None = None):
         self.before_minutes    = before_minutes
         self.after_minutes     = after_minutes
         self.lookahead_minutes = lookahead_minutes
         self.medium_penalty    = int(medium_penalty)
+        self.relevant_currencies = {str(c).upper() for c in (relevant_currencies or ["GBP", "USD"])}
         self.sg_tz = pytz.timezone("Asia/Singapore")
         self.path = CALENDAR_CACHE_FILE
 
@@ -49,17 +52,15 @@ class NewsFilter:
         currency = str(event.get("currency", "")).upper()
         impact   = str(event.get("impact", "")).lower()
 
-        if currency != "USD":
+        if currency not in self.relevant_currencies:
             return None
+
         # Accept all impact values that calendar_fetcher passes through.
         # FF feed now returns "high" / "medium" (lowercased on storage).
         # Legacy values ("3", "red", "medium-high") kept for cache compatibility.
-        if impact not in {"high", "medium", "3", "red", "medium-high"}:
-            return None
-
-        if any(k in name for k in self.MAJOR_KEYWORDS):
+        if impact in {"high", "3", "red"}:
             return "major"
-        if any(k in name for k in self.MEDIUM_KEYWORDS):
+        if impact in {"medium", "medium-high"}:
             return "medium"
         return None
 
@@ -92,7 +93,7 @@ class NewsFilter:
                 return {
                     "blocked": True,
                     "penalty": 0,
-                    "reason": f"Blocked by major news: {event['name']} at {event['time_sgt']} SGT",
+                    "reason": f"Blocked by major {event.get('currency', '')} news: {event['name']} at {event['time_sgt']} SGT",
                     "severity": severity,
                     "event": event,
                 }
@@ -100,7 +101,7 @@ class NewsFilter:
                 active_medium = {
                     "blocked": False,
                     "penalty": self.medium_penalty,
-                    "reason": f"Medium news nearby: {event['name']} at {event['time_sgt']} SGT",
+                    "reason": f"Medium {event.get('currency', '')} news nearby: {event['name']} at {event['time_sgt']} SGT",
                     "severity": severity,
                     "event": event,
                 }

@@ -1,10 +1,14 @@
 # Cable Scalp — Changelog
 
-## v2.3.0 — Telegram max wording and docs sync
+## v2.4.0 — GBP/USD news filter and reduced risk profile
 
-- Runtime Telegram startup labels are fully settings-driven for session maximums and loss max.
-- Synced fallback defaults and settings example to active v2.3 values: session maximums 4, daily trade max 12, daily loss max 4, session loss max 2.
-- Kept US session and US_Cont separately identifiable across logic, logs, reports, and Telegram.
+- Version updated to **Cable Scalp v2.4**.
+- News filter now treats both **GBP** and **USD** events as relevant for GBP/USD.
+- Reduced demo/live risk sizing to the safer profile:
+  - Score 4 → **$45** partial risk setting
+  - Score 5–6 → **$60** full risk setting
+- Kept US and US_Cont separately identifiable across logic, logs, reports, and Telegram.
+- Kept Telegram session wording as **max** instead of **cap**.
 
 
 ---

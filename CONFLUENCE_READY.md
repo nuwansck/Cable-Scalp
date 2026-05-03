@@ -1,6 +1,6 @@
-# Cable Scalp v2.3 — Technical Specification & Operations Wiki
+# Cable Scalp v2.4 — Technical Specification & Operations Wiki
 
-**Bot name:** Cable Scalp v2.3
+**Bot name:** Cable Scalp v2.4
 **Instrument:** GBP/USD (Cable) only
 **Exchange:** OANDA (practice & live)
 **Deployment:** Railway (PaaS)
@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Scope
 
-Cable Scalp v2.3 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+Cable Scalp v2.4 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
 It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
 with minimum score thresholds per session. All configuration lives in `settings.json`.
 
