@@ -1,4 +1,4 @@
-"""Telegram message templates for Cable Scalp v2.4
+"""Telegram message templates for Cable Scalp v2.5
 AtomicFX-style: clean, state-change only, minimal noise.
 """
 from __future__ import annotations
@@ -37,7 +37,7 @@ def _split_banner(banner: str) -> tuple[str, str]:
     """Extract pair from banner.
     Handles both:
       '🇬🇧 LONDON [GBP/USD]'  → ('🇬🇧 LONDON [GBP/USD]', 'GBP/USD')
-      'Cable Scalp v2.4 | GBP/USD' → ('Cable Scalp v2.4', 'GBP/USD')
+      'Cable Scalp v2.5 | GBP/USD' → ('Cable Scalp v2.5', 'GBP/USD')
     """
     if "[" in banner and "]" in banner:
         pair = banner[banner.index("[")+1 : banner.index("]")]
@@ -308,19 +308,6 @@ def msg_new_day_resume(prev_day_pnl=None, prev_day_trades=0, london_open_sgt="16
 
 
 # ── 8c. Session max ───────────────────────────────────────────────────────────
-
-def msg_session_cap(session_name, session_losses, session_limit,
-                    day_losses, day_limit, next_session) -> str:
-    si  = _session_icon(session_name)
-    ni  = _session_icon(next_session)
-    rem = max(0, day_limit - day_losses)
-    return (
-        f"🔶 Session Cap\n{_DIV}\n"
-        f"{si} {session_name}: {session_losses}/{session_limit} losses  (paused)\n"
-        f"Day: {day_losses}/{day_limit} losses  ({rem} remaining)\n"
-        f"{_DIV}\n"
-        f"Next: {ni} {next_session}"
-    )
 
 
 # ── 9. Session open ───────────────────────────────────────────────────────────

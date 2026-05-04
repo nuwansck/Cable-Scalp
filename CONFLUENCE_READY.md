@@ -1,6 +1,6 @@
-# Cable Scalp v2.4 — Technical Specification & Operations Wiki
+# Cable Scalp v2.5 — Technical Specification & Operations Wiki
 
-**Bot name:** Cable Scalp v2.4
+**Bot name:** Cable Scalp v2.5
 **Instrument:** GBP/USD (Cable) only
 **Exchange:** OANDA (practice & live)
 **Deployment:** Railway (PaaS)
@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Scope
 
-Cable Scalp v2.4 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
+Cable Scalp v2.5 is a fully automated 5-minute scalping bot dedicated to GBP/USD.
 It uses a three-layer signal engine (EMA crossover + ORB + CPR bias) scored 0–6/6,
 with minimum score thresholds per session. All configuration lives in `settings.json`.
 
@@ -30,8 +30,8 @@ scheduler.py  (APScheduler — every 5 min)
       |       └── _execution_phase() Margin check → spread check → place_order()
       |
       ├── send_daily_report()   04:00 SGT Mon–Fri
-      ├── send_weekly_report()  Monday 08:15 SGT
-      └── send_monthly_report() First Monday 08:00 SGT
+      ├── send_weekly_report()  Monday 08:00 SGT
+      └── send_monthly_report() First Monday 08:10 SGT
 ```
 
 ---
@@ -183,9 +183,9 @@ Score 1–2 = noise; score 3+ sends.
 
 | Report | Time | Content |
 |---|---|---|
-| Daily | 04:00 SGT Mon–Fri | Session breakdown + day total + MTD |
-| Weekly | Monday 08:15 SGT | Session + setup bars |
-| Monthly | First Monday 08:00 SGT | Full breakdown + verdict + **H1 filter split** |
+| Daily | 07:50 SGT Mon–Fri | Session breakdown + day total + MTD |
+| Weekly | Monday 08:00 SGT | Session + setup bars |
+| Monthly | First Monday 08:10 SGT | Full breakdown + verdict + **H1 filter split** |
 
 ---
 

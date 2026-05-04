@@ -1,5 +1,60 @@
 # Cable Scalp — Changelog
 
+## v2.5.0 — 2026-05-04 — Schedule refinement, weekly CSV export, import fix
+
+### Bug fix — `_clean_session` not imported in `bot.py`
+
+Every trade cycle crashed with `NameError: name '_clean_session' is not defined`
+the moment Tokyo session opened on Monday. The helper existed in
+`telegram_templates.py` (introduced in v2.1) but was never added to the
+`from telegram_templates import (...)` block in `bot.py`. Sunday masked the
+bug because the Sunday guard exits before the affected line is reached.
+
+**Fix:** `_clean_session` added to the import block in `bot.py`.
+
+### Report schedule changes
+
+| Report | Before | After |
+|---|---|---|
+| Daily summary | 04:00 SGT | **07:50 SGT** |
+| Weekly report | 08:15 SGT | **08:00 SGT** |
+| Weekly trade export | 08:20 SGT | **08:05 SGT** |
+| Monthly report | 08:00 SGT | **08:10 SGT** |
+
+Daily report moved to 07:50 SGT — after US Continuation closes at 04:00,
+capturing the full overnight session before the dead zone begins.
+
+### Weekly export changed from JSON → CSV
+
+`send_weekly_export` now sends `cable_scalp_trades_to_YYYY-MM-DD.csv` instead
+of the raw `trade_history.json`. CSV columns are identical to the monthly
+export: `date_sgt`, `time_sgt`, `session`, `direction`, `score`, `result`,
+`pl_usd`, `balance`, `h1_trend`, `h1_aligned`, `ema_pts`, `orb_pts`,
+`cpr_pts`, `duration_min`, `spread_pips`, `units`, `position_usd`.
+
+Both weekly and monthly exports now open directly in Excel with consistent
+column layout. The JSON file is no longer sent via Telegram.
+
+### Dead code removed
+
+`msg_session_cap()` in `telegram_templates.py` was never imported or called
+anywhere in the codebase. Removed.
+
+### Stale references cleaned up
+
+All timing references in `reporting.py`, `scheduler.py`, `README.md`,
+`CONFLUENCE_READY.md`, and `SETTINGS.md` updated to reflect the new schedule.
+`_V16_START` / `v16` / `v2.3` labels in `reporting.py` updated to version-neutral
+names (`_DEPLOY_START`, `cable_scalp_trades_to_`).
+
+### Files changed
+
+`bot.py`, `reporting.py`, `scheduler.py`, `telegram_templates.py`,
+`settings.json`, `version.py`, `README.md`, `SETTINGS.md`,
+`CONFLUENCE_READY.md`, `CHANGELOG.md`
+
+---
+
 ## v2.4.0 — GBP/USD news filter and reduced risk profile
 
 - Version updated to **Cable Scalp v2.4**.

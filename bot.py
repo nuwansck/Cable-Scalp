@@ -1,4 +1,4 @@
-"""Main orchestrator for Cable Scalp v2.4 — GBP/USD M5 Scalper
+"""Main orchestrator for Cable Scalp v2.5 — GBP/USD M5 Scalper
 
 Dedicated GBP/USD (Cable) scalping bot. Single pair, clean data, focused strategy.
 
@@ -48,6 +48,7 @@ from telegram_templates import (
     msg_news_block, msg_news_penalty, msg_cooldown_started, msg_daily_cap,
     msg_spread_skip, msg_order_failed, msg_error, msg_friday_cutoff,
     msg_margin_adjustment, msg_new_day_resume, msg_session_open,
+    _clean_session,
 )
 from reconcile_state import reconcile_runtime_state, startup_oanda_reconcile
 
@@ -133,7 +134,7 @@ def _pip_size(settings: dict) -> float:
 def _pip_dp(pip: float) -> int:
     """Decimal places for price rounding given pip size."""
     if pip <= 0.0001: return 5   # GBP_USD (Cable)
-    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.4)
+    if pip <= 0.01:   return 3   # JPY pairs (not used in Cable Scalp v2.5)
     return 2
 
 
@@ -195,7 +196,7 @@ def _signal_payload(**kwargs):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 def validate_settings(settings: dict) -> dict:
-    required = ["pairs"]  # Cable Scalp v2.4: pair_sl_tp fixed pips used exclusively
+    required = ["pairs"]  # Cable Scalp v2.5: pair_sl_tp fixed pips used exclusively
     missing  = [k for k in required if k not in settings]
     if missing:
         raise ValueError(f"Missing required settings keys: {missing}")

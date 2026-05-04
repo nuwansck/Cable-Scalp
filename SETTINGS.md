@@ -1,4 +1,4 @@
-# Cable Scalp v2.4 — Settings Reference
+# Cable Scalp v2.5 — Settings Reference
 
 All settings live in `settings.json`. The bot syncs this file to the Railway
 volume on every startup. Edit on the volume and redeploy to apply changes.
@@ -9,7 +9,7 @@ volume on every startup. Edit on the volume and redeploy to apply changes.
 
 | Key | Default | Description |
 |---|---|---|
-| `bot_name` | `Cable Scalp v2.4` | Shown in all Telegram alerts and logs. |
+| `bot_name` | `Cable Scalp v2.5` | Shown in all Telegram alerts and logs. |
 | `enabled` | `true` | Master on/off switch. `false` = bot skips all trade cycles but stays running. |
 | `demo_mode` | `true` | `true` = OANDA practice account. `false` = live account. |
 
@@ -159,9 +159,9 @@ GBP/USD SL/TP summary:
 
 | Key | Default | Description |
 |---|---|---|
-| `daily_report_hour_sgt` | `4` | Daily report fires at this hour (04:00 SGT = dead zone start). |
-| `daily_report_minute_sgt` | `0` | Daily report minute. |
+| `daily_report_hour_sgt` | `7` | Daily report fires at this hour (07:50 SGT = after US Cont. closes). |
+| `daily_report_minute_sgt` | `50` | Daily report minute (fires at 07:50 SGT). |
 | `weekly_report_hour_sgt` | `8` | Weekly report fires Monday at this hour. |
-| `weekly_report_minute_sgt` | `15` | Weekly report minute. |
-| `monthly_report_hour_sgt` | `8` | Monthly report fires first Monday at this hour. |
+| `weekly_report_minute_sgt` | `0` | Weekly report minute (fires at 08:00 SGT). |
+| `monthly_report_hour_sgt` | `8` | Monthly report fires first Monday at this hour (08:10 SGT). |
 | `trading_day_start_hour_sgt` | `8` | Hour that defines the start of a new trading day. |

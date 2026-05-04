@@ -134,8 +134,8 @@ def main():
     retention_days = int(settings.get('db_retention_days', 90))
 
     # Report schedule — configurable via settings.json
-    daily_report_hour    = int(settings.get('daily_report_hour_sgt',     4))  # 04:00 SGT — dead zone start
-    daily_report_minute  = int(settings.get('daily_report_minute_sgt',   0))
+    daily_report_hour    = int(settings.get('daily_report_hour_sgt',     7))  # 07:50 SGT — after US Cont. session closes
+    daily_report_minute  = int(settings.get('daily_report_minute_sgt',  50))
     weekly_report_hour   = int(settings.get('weekly_report_hour_sgt',    8))
     weekly_report_minute = int(settings.get('weekly_report_minute_sgt', 15))
     monthly_report_hour  = int(settings.get('monthly_report_hour_sgt',   8))
@@ -145,7 +145,7 @@ def main():
     # Avoids re-reading secrets + creating new HTTP sessions every 5 minutes.
     _alert = TelegramAlert()
 
-    logger.info('%s — Scheduler starting', settings.get('bot_name', 'Cable Scalp v2.4'))
+    logger.info('%s — Scheduler starting', settings.get('bot_name', 'Cable Scalp v2.5'))
     logger.info('DATA_DIR : %s', DATA_DIR)
     logger.info('Python   : %s', sys.version.split()[0])
     for warning in run_startup_checks():
@@ -196,7 +196,7 @@ def main():
         coalesce=True,
     )
 
-    # Weekly export: Monday 08:20 SGT — 5 min after weekly report
+    # Weekly export: Monday 08:05 SGT — 5 min after weekly report
     scheduler.add_job(
         send_weekly_export,
         CronTrigger(day_of_week='mon', hour=weekly_report_hour,
@@ -207,7 +207,7 @@ def main():
         coalesce=True,
     )
 
-    # Monthly CSV export: last day of month at 08:30 SGT — cumulative v1.9 trade log
+    # Monthly CSV export: last day of month at 08:30 SGT — cumulative trade log
     scheduler.add_job(
         send_monthly_csv_export,
         CronTrigger(day='last', hour=8, minute=30, timezone=SG_TZ),
@@ -228,7 +228,7 @@ def main():
         coalesce=True,
     )
 
-    # Daily: Mon–Fri at daily_report_hour SGT (04:00 = dead zone start, full day captured)
+    # Daily: Mon–Fri at daily_report_hour SGT (07:50 = after US Cont. closes, full night captured)
     scheduler.add_job(
         send_daily_report,
         CronTrigger(day_of_week='mon-fri', hour=daily_report_hour,
@@ -266,7 +266,7 @@ def main():
                 monthly_report_hour, monthly_report_minute)
     logger.info('  Weekly report  — every Monday at %02d:%02d SGT',
                 weekly_report_hour, weekly_report_minute)
-    logger.info('  Weekly export  — every Monday at %02d:%02d SGT (trade_history.json)',
+    logger.info('  Weekly export  — every Monday at %02d:%02d SGT (trade_history.csv)',
                 weekly_report_hour, weekly_report_minute + 5)
     logger.info('  Daily report   — Mon–Fri at %02d:%02d SGT',
                 daily_report_hour, daily_report_minute)
@@ -278,7 +278,7 @@ def main():
         _balance = _summary["balance"] if _summary else 0.0
         _threshold = int(settings.get('signal_threshold', 4))
         _mode    = 'DEMO' if settings.get('demo_mode', True) else 'LIVE'
-        _version = settings.get('bot_name', 'Cable Scalp v2.4')
+        _version = settings.get('bot_name', 'Cable Scalp v2.5')
 
         # ── Startup message deduplication ──────────────────────────────────
         # Suppress duplicate startup alerts when Railway restarts the container
@@ -322,7 +322,7 @@ def main():
             _state["last_startup_ts"] = _now_ts
             save_json(RUNTIME_STATE_FILE, _state)
             logger.info("Startup Telegram sent.")
-            # weekly export runs via scheduler (Monday 08:20 SGT)
+            # weekly export runs via scheduler (Monday 08:05 SGT)
         else:
             logger.info(
                 "Startup Telegram suppressed — last sent %.0fs ago (dedup window 90s).",

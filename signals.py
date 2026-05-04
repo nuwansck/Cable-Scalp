@@ -1,4 +1,4 @@
-"""Signal engine for EMA crossover + ORB scalping — Cable Scalp v2.4
+"""Signal engine for EMA crossover + ORB scalping — Cable Scalp v2.5
 
 Dedicated to GBP/USD (Cable).
 instrument is passed explicitly to analyze(); no pair is hard-coded.
@@ -115,7 +115,7 @@ def _price_dp(pip_size: float) -> int:
     if pip_size <= 0.0001:
         return 5   # GBP_USD (e.g. 1.27345) — Cable
     if pip_size <= 0.01:
-        return 3   # JPY pairs (not used in Cable Scalp v2.4)
+        return 3   # JPY pairs (not used in Cable Scalp v2.5)
     return 2       # fallback
 
 
@@ -137,7 +137,7 @@ class SignalEngine:
         """Run the Cable Scalp EMA + ORB (time-decayed) + CPR-bias scoring engine.
 
         Args:
-            instrument: OANDA instrument code (GBP_USD for Cable Scalp v2.4)
+            instrument: OANDA instrument code (GBP_USD for Cable Scalp v2.5)
             settings:   merged (global + pair-specific) settings dict
 
         Returns:

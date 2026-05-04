@@ -1,2 +1,2 @@
-VERSION     = "2.4.0"
-DESCRIPTION = "Cable Scalp v2.4 — GBP/USD news filter with reduced demo/live risk profile"
+VERSION     = "2.5.0"
+DESCRIPTION = "Cable Scalp v2.5 — schedule refinement, weekly CSV export, import fix"
