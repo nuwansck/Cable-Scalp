@@ -1,2 +1,2 @@
-VERSION     = "2.9.0"
-DESCRIPTION = "Cable Scalp v2.9 — fix reconcile future to_utc + force-close actual PnL recovery"
+VERSION     = "2.10.0"
+DESCRIPTION = "Cable Scalp v2.10 — fix startup reconcile (OANDA /transactions pagination bug)"

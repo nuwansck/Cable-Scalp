@@ -336,10 +336,16 @@ class OandaTrader:
     def get_today_closed_transactions(self, instrument: str, today_sgt: str) -> list:
         """Fetch all closing ORDER_FILL transactions for today (SGT date YYYY-MM-DD).
 
-        Uses OANDA /v3/accounts/.../transactions endpoint with a UTC time window
-        derived from the SGT calendar day. Returns closing fills for the instrument.
-        Called by startup_oanda_reconcile() to ensure the loss cap sees the correct
-        count even after a mid-day redeploy.
+        *** KNOWN ISSUE (v2.10) ***
+        OANDA's GET /transactions?from=...&to=...&type=ORDER_FILL endpoint returns a
+        PAGINATION ENVELOPE: {"count": N, "pages": [...], "lastTransactionID": "..."}
+        The transactions are NOT in the root response — they are behind the page URLs.
+        This method reads r.json().get("transactions", []) which always returns [] for
+        this response format, making the method non-functional.
+
+        startup_oanda_reconcile() has been updated in v2.10 to use
+        get_recent_closed_trades() instead. This method is retained for potential
+        future use (e.g. after implementing page-following logic).
         """
         import pytz
         from datetime import datetime, timedelta

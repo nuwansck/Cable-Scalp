@@ -1,5 +1,44 @@
 # Cable Scalp — Changelog
 
+## v2.10.0 — 2026-05-05 — Fix startup reconcile (OANDA /transactions pagination bug)
+
+### Bug fix — `startup_oanda_reconcile` always returned empty (`reconcile_state.py`)
+
+**Root cause — OANDA /transactions endpoint returns a pagination envelope, not data:**
+
+`get_today_closed_transactions()` called:
+```
+GET /v3/accounts/{id}/transactions?from=...&to=...&type=ORDER_FILL
+```
+
+OANDA's response for this endpoint is a **pagination envelope**:
+```json
+{"count": 2, "pages": ["https://api.oanda.com/.../transactions/idrange?from=915&to=926"], "lastTransactionID": "956"}
+```
+
+The actual transactions are behind the `pages` URLs — they are NOT in the root
+response. The code called `r.json().get("transactions", [])` which always returned
+`[]` because the `"transactions"` key does not exist in this response format.
+
+As a result, `startup_oanda_reconcile` has logged "no closing transactions found"
+on every startup since it was first written, regardless of how many trades closed
+that day. This was the root cause behind:
+- The loss cap not seeing today's losses correctly after restarts
+- Trade P&L not being backfilled on startup (instead relying entirely on
+  `reconcile_runtime_state` which runs on the first live cycle)
+
+**Fix:**
+Replaced `get_today_closed_transactions()` in `startup_oanda_reconcile` with
+`get_recent_closed_trades(instrument, count=50)` — the same endpoint used by
+`reconcile_runtime_state()` which is proven to work correctly. The returned trades
+are filtered to `closeTime` matching today (SGT date) before being processed.
+
+The broken `get_today_closed_transactions()` method is retained in `oanda_trader.py`
+with an updated docstring documenting the pagination issue, in case it's needed
+for other purposes in future.
+
+---
+
 ## v2.9.0 — 2026-05-05 — Fix reconcile future to_utc + force-close actual P&L recovery
 
 ### Bug fix 1 — `get_today_closed_transactions` future `to` datetime (`oanda_trader.py`)
