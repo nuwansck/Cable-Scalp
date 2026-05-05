@@ -182,14 +182,8 @@ class OandaTrader:
     def get_recent_closed_trades(self, instrument: str | None = None, count: int = 20) -> list:
         """Return recently closed trades for the given instrument.
 
-        v2.12 change: queries state=ALL instead of state=CLOSED.
-
-        Root cause discovered via v2.11 diagnostics: OANDA's demo API does not return
-        trades #916 and #923 under state=CLOSED even though their stop-loss orders
-        executed correctly. The repeated MARKET_ORDER_REJECT close attempts (from the
-        v2.5 close_trade bug) appear to have left those trades in a non-standard state
-        in OANDA's system. Querying state=ALL returns all trades regardless of state
-        and we filter to CLOSED + matching instrument in Python.
+        Queries state=ALL and filters state=CLOSED in Python to ensure all
+        genuinely closed trades are returned regardless of OANDA index quirks.
         """
         try:
             params: dict = {"state": "ALL", "count": count}
@@ -364,134 +358,6 @@ class OandaTrader:
         except Exception as e:
             log.warning("get_open_trade error: %s", e)
             return None
-
-
-    def get_today_closed_transactions(self, instrument: str, today_sgt: str) -> list:
-        """Fetch all closing ORDER_FILL transactions for today (SGT date YYYY-MM-DD).
-
-        Fixed in v2.13: OANDA's GET /transactions?from=...&to=...&type=ORDER_FILL
-        returns a PAGINATION ENVELOPE:
-            {"count": N, "pages": ["https://...transactions/idrange?from=X&to=Y"]}
-        The actual transactions are behind the page URLs.  This method now follows
-        each page URL and collects all ORDER_FILL transactions, then filters to
-        closing fills (tradesClosed present) for the given instrument.
-
-        This is the most reliable way to find SL/TP closures because the
-        /transactions endpoint is the definitive audit trail — it records every
-        event regardless of the /trades endpoint state quirks seen in v2.5–v2.12.
-        """
-        import pytz
-        from datetime import datetime, timedelta
-
-        sgt = pytz.timezone("Asia/Singapore")
-        utc = pytz.utc
-        try:
-            day_start = sgt.localize(datetime.strptime(today_sgt, "%Y-%m-%d"))
-        except Exception as exc:
-            log.warning("get_today_closed_transactions: bad date %s: %s", today_sgt, exc)
-            return []
-        day_end  = day_start + timedelta(days=1)
-        # Cap 'to' at now+5 min — OANDA returns empty if 'to' is in the future.
-        # e.g. at 17:58 SGT the day ends at 16:00 UTC next day, which is 6h ahead.
-        now_utc  = datetime.now(utc)
-        safe_end = min(day_end.astimezone(utc), now_utc + timedelta(minutes=5))
-        from_utc = day_start.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%S.000000Z")
-        to_utc   = safe_end.strftime("%Y-%m-%dT%H:%M:%S.000000Z")
-
-        try:
-            # Step 1: fetch the pagination envelope
-            r = self._request(
-                "GET",
-                f"/v3/accounts/{self.account_id}/transactions",
-                params={"from": from_utc, "to": to_utc, "type": "ORDER_FILL"},
-                timeout=20,
-            )
-            if r.status_code != 200:
-                log.warning(
-                    "get_today_closed_transactions HTTP %s: %s",
-                    r.status_code, r.text[:200],
-                )
-                return []
-
-            envelope = r.json()
-            pages = envelope.get("pages", [])
-            txn_count = envelope.get("count", 0)
-            log.debug(
-                "get_today_closed_transactions envelope: count=%s pages=%d",
-                txn_count, len(pages),
-            )
-
-            if not pages:
-                # No pages means no transactions in the window — genuinely empty
-                log.info(
-                    "get_today_closed_transactions: 0 ORDER_FILL pages for %s on %s",
-                    instrument, today_sgt,
-                )
-                return []
-
-            # Step 2: follow each page URL and collect transactions
-            all_txns = []
-            for page_url in pages:
-                try:
-                    pr = self._request("GET", page_url, timeout=20)
-                    if pr.status_code == 200:
-                        page_txns = pr.json().get("transactions", [])
-                        all_txns.extend(page_txns)
-                        log.debug(
-                            "get_today_closed_transactions page %s: %d txns",
-                            page_url, len(page_txns),
-                        )
-                    else:
-                        log.warning(
-                            "get_today_closed_transactions page fetch HTTP %s: %s",
-                            pr.status_code, pr.text[:200],
-                        )
-                except Exception as page_exc:
-                    log.warning(
-                        "get_today_closed_transactions page fetch error: %s", page_exc,
-                    )
-
-            # Step 3: filter to closing fills for the target instrument
-            closing = [
-                t for t in all_txns
-                if t.get("instrument") in (instrument, instrument.replace("_", "/"))
-                and t.get("tradesClosed")
-            ]
-            log.info(
-                "get_today_closed_transactions: %d total txns → %d closing fills for %s on %s",
-                len(all_txns), len(closing), instrument, today_sgt,
-            )
-            return closing
-
-        except Exception as exc:
-            log.error("get_today_closed_transactions error: %s", exc)
-            return []
-
-    def close_trade(self, trade_id: str) -> bool:
-        """Close a specific open trade by its OANDA trade ID.
-
-        Used by force_close_stale_trades() in bot.py to close individual
-        trades by ID rather than closing the entire instrument position.
-
-        Added in v2.6 — this method was missing in v2.5, causing
-        force_close_stale_trades() to throw AttributeError every 3 minutes
-        whenever a stale trade needed force-closing.
-        """
-        try:
-            r = self._request(
-                "PUT",
-                f"/v3/accounts/{self.account_id}/trades/{trade_id}/close",
-                timeout=15,
-            )
-            if r.status_code == 200:
-                log.info("close_trade: trade %s closed successfully", trade_id)
-                return True
-            err = r.text[:300] if r.text else f"HTTP {r.status_code}"
-            log.error("close_trade failed: HTTP %s — %s", r.status_code, err)
-            return False
-        except Exception as e:
-            log.error("close_trade error: %s", e)
-            return False
 
     def close_position(self, instrument):
         try:
