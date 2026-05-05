@@ -352,8 +352,12 @@ class OandaTrader:
             log.warning("get_today_closed_transactions: bad date %s: %s", today_sgt, exc)
             return []
         day_end  = day_start + timedelta(days=1)
+        # Cap 'to' at now+5 min — OANDA returns empty if 'to' is in the future.
+        # e.g. at 17:58 SGT the day ends at 16:00 UTC next day, which is 6h ahead.
+        now_utc  = datetime.now(utc)
+        safe_end = min(day_end.astimezone(utc), now_utc + timedelta(minutes=5))
         from_utc = day_start.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%S.000000Z")
-        to_utc   = day_end.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%S.000000Z")
+        to_utc   = safe_end.strftime("%Y-%m-%dT%H:%M:%S.000000Z")
 
         try:
             r = self._request(

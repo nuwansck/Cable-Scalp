@@ -1,5 +1,40 @@
 # Cable Scalp — Changelog
 
+## v2.9.0 — 2026-05-05 — Fix reconcile future to_utc + force-close actual P&L recovery
+
+### Bug fix 1 — `get_today_closed_transactions` future `to` datetime (`oanda_trader.py`)
+
+At any startup before 00:00 UTC (i.e., before midnight UTC = 08:00 SGT), the SGT
+calendar day's end converts to a UTC time that is still in the future. For example,
+at 17:58 SGT May 5 (= 09:58 UTC), the window `to` = `2026-05-05T16:00:00.000000Z`
+which is 6 hours ahead. OANDA returns an empty transaction list when the `to`
+parameter is in the future, causing `startup_oanda_reconcile` to always report
+"no closing transactions found" for any startup before 08:00 SGT.
+
+**Fix:** `to_utc` is now capped at `min(day_end_utc, now_utc + 5 minutes)` so the
+query window never extends into the future while still covering the full trading day
+for late-day startups.
+
+### Bug fix 2 — Force-close fallback records actual P&L (`bot.py`)
+
+When `close_trade()` returns `False` (trade already closed on broker), the fallback
+calls `get_trade_pnl()` which uses `GET /v3/accounts/{id}/trades/{tradeID}`. This
+endpoint **only returns OPEN trades** on OANDA — it returns HTTP 404 for closed trades,
+causing `get_trade_pnl()` to always return `None` for already-closed positions. The
+result: every stale trade that was closed by SL/TP gets recorded as `$0 P&L` instead
+of the actual loss/gain, breaking the daily loss counter.
+
+**Fix:** The fallback now first calls `get_recent_closed_trades(instrument, count=50)`
+(uses `GET /v3/accounts/{id}/trades?state=CLOSED` which reliably returns closed trade
+data) and matches by trade ID to get the real `realizedPL`. Only if that also fails
+does it call `get_trade_pnl()`, and only as a last resort falls back to `$0`.
+
+**Impact (v2.8, May 5 2026):** Trades #916 (SL −$31.93) and #923 (SL −$31.77) were
+both recorded as `$0 P&L` on the first v2.8 cycle. The daily loss counter for May 5
+did not reflect the actual −$64 loss. Deploy v2.9 to prevent this from recurring.
+
+---
+
 ## v2.8.0 — 2026-05-05 — Fix dead zone management bypass
 
 ### Bug fix — Open trades not managed during dead zone 04:00–07:59 SGT (`bot.py`)

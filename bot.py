@@ -869,7 +869,25 @@ def force_close_stale_trades(history: list, trader, alert, settings: dict,
                     # close_trade failed — check if the trade is already closed on
                     # the broker side (e.g. hit SL/TP while force-close was broken).
                     # If so, backfill the P&L and mark it done so we stop retrying.
-                    pnl = trader.get_trade_pnl(str(trade_id))
+                    #
+                    # NOTE: GET /trades/{id} only returns OPEN trades on OANDA — it
+                    # returns 404 for closed trades, making get_trade_pnl() unreliable
+                    # here. Try get_recent_closed_trades() first (proven to work), then
+                    # fall back to get_trade_pnl(), then fall back to $0.
+                    pnl = None
+                    try:
+                        closed = trader.get_recent_closed_trades(instrument, count=50)
+                        for ct in closed:
+                            if str(ct.get("id", "")) == str(trade_id):
+                                raw = ct.get("realizedPL")
+                                if raw is not None:
+                                    pnl = float(raw)
+                                break
+                    except Exception as _rct_err:
+                        log.warning("[%s] get_recent_closed_trades error in force_close fallback: %s",
+                                    instrument, _rct_err)
+                    if pnl is None:
+                        pnl = trader.get_trade_pnl(str(trade_id))
                     if pnl is not None:
                         # Broker confirms trade is CLOSED — record it and move on
                         trade["realized_pnl_usd"] = pnl
