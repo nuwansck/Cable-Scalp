@@ -181,19 +181,39 @@ def startup_oanda_reconcile(
         summary["errors"].append(msg)
         return summary
 
+    log.info(
+        "startup_oanda_reconcile: get_recent_closed_trades returned %d trade(s) for %s",
+        len(closed_trades), instrument,
+    )
+    if closed_trades:
+        for _t in closed_trades[:3]:
+            log.info(
+                "startup_oanda_reconcile sample trade: id=%s instrument=%s state=%s "
+                "closeTime=%s realizedPL=%s",
+                _t.get("id"), _t.get("instrument"), _t.get("state"),
+                _t.get("closeTime"), _t.get("realizedPL"),
+            )
+
     # Filter to only trades that closed today (SGT date)
     today_closed = []
     for trade in closed_trades:
         close_time_raw = trade.get("closeTime", "")
         if not close_time_raw:
+            log.debug("startup_oanda_reconcile: trade %s has no closeTime — skipping",
+                      trade.get("id"))
             continue
         try:
             dt_utc = datetime.strptime(close_time_raw[:19], "%Y-%m-%dT%H:%M:%S")
             dt_sgt = pytz.utc.localize(dt_utc).astimezone(SGT)
-            if dt_sgt.strftime("%Y-%m-%d") != today_sgt:
+            trade_date = dt_sgt.strftime("%Y-%m-%d")
+            if trade_date != today_sgt:
+                log.debug("startup_oanda_reconcile: trade %s closed on %s, not today (%s) — skipping",
+                          trade.get("id"), trade_date, today_sgt)
                 continue
             trade["_close_time_sgt"] = dt_sgt.strftime("%Y-%m-%d %H:%M:%S")
-        except Exception:
+        except Exception as _te:
+            log.debug("startup_oanda_reconcile: could not parse closeTime '%s' for trade %s: %s",
+                      close_time_raw, trade.get("id"), _te)
             continue
         today_closed.append(trade)
 

@@ -181,16 +181,46 @@ class OandaTrader:
 
     def get_recent_closed_trades(self, instrument: str | None = None, count: int = 20) -> list:
         try:
+            params: dict = {"state": "CLOSED", "count": count}
+            # Pass instrument as URL param so OANDA filters server-side,
+            # avoiding count truncation when multiple instruments are traded.
+            if instrument:
+                params["instrument"] = instrument
             r = self._request(
                 "GET",
                 f"/v3/accounts/{self.account_id}/trades",
-                params={"state": "CLOSED", "count": count},
+                params=params,
                 timeout=10,
             )
             if r.status_code == 200:
-                trades = r.json().get("trades", [])
+                raw = r.json()
+                trades = raw.get("trades", [])
+                log.debug(
+                    "get_recent_closed_trades raw: HTTP 200 | instrument=%s | "
+                    "total_returned=%d | lastTransactionID=%s",
+                    instrument, len(trades), raw.get("lastTransactionID", "?"),
+                )
+                if trades:
+                    sample = trades[0]
+                    log.debug(
+                        "get_recent_closed_trades sample[0]: id=%s instrument=%s "
+                        "state=%s closeTime=%s realizedPL=%s",
+                        sample.get("id"), sample.get("instrument"),
+                        sample.get("state"), sample.get("closeTime"),
+                        sample.get("realizedPL"),
+                    )
+                # Also apply Python-side filter as fallback in case URL param is ignored
                 if instrument:
-                    trades = [t for t in trades if t.get("instrument") == instrument]
+                    all_count = len(trades)
+                    trades = [
+                        t for t in trades
+                        if t.get("instrument") in (instrument, instrument.replace("_", "/"))
+                    ]
+                    if len(trades) != all_count:
+                        log.debug(
+                            "get_recent_closed_trades instrument filter: %d → %d trades",
+                            all_count, len(trades),
+                        )
                 return trades
             log.warning("get_recent_closed_trades failed: %s %s", r.status_code, r.text[:200])
             return []

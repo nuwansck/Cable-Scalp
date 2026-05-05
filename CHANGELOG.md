@@ -1,5 +1,41 @@
 # Cable Scalp — Changelog
 
+## v2.11.0 — 2026-05-05 — Reconcile diagnostic logging + get_recent_closed_trades URL param fix
+
+### Context
+
+`startup_oanda_reconcile` has been logging "no closing trades found" on every startup
+since v2.10 introduced `get_recent_closed_trades()` as the data source. The root cause
+is not yet confirmed, so v2.11 adds explicit diagnostic logging at INFO level so the
+next startup log will tell us exactly what OANDA is returning.
+
+### Fix 1 — `get_recent_closed_trades` now passes instrument as URL parameter (`oanda_trader.py`)
+
+Previously, instrument filtering was done in Python after fetching `count` trades
+across all instruments. If `count=20` (the default) and the most recent 20 closed
+trades across all instruments did not include any GBP_USD trades, the result would be
+empty even if GBP_USD closed trades existed further back.
+
+**Fix:** `instrument` is now passed as a URL parameter
+(`GET /trades?state=CLOSED&instrument=GBP_USD&count=50`) so OANDA filters
+server-side. Python-side filter is kept as a fallback and now also handles the
+`GBP/USD` slash format (web interface uses slash; REST API uses underscore — the
+filter accepts both to be safe).
+
+### Fix 2 — Diagnostic logging added to `startup_oanda_reconcile` (`reconcile_state.py`)
+
+Added INFO-level logging that records:
+- How many trades `get_recent_closed_trades` returned
+- The `id`, `instrument`, `state`, `closeTime`, and `realizedPL` of the first 3
+  returned trades
+- Per-trade debug messages when a trade is skipped due to missing `closeTime` or
+  a `closeTime` that doesn't match today's SGT date
+
+This will allow the exact failure point to be identified from the next startup log
+without requiring a code change.
+
+---
+
 ## v2.10.0 — 2026-05-05 — Fix startup reconcile (OANDA /transactions pagination bug)
 
 ### Bug fix — `startup_oanda_reconcile` always returned empty (`reconcile_state.py`)
