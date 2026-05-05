@@ -1,5 +1,94 @@
 # Cable Scalp — Changelog
 
+## v2.8.0 — 2026-05-05 — Fix dead zone management bypass
+
+### Bug fix — Open trades not managed during dead zone 04:00–07:59 SGT (`bot.py`)
+
+**Root cause:**
+`_guard_phase()` has two separate exit points that both fire when `session is None`
+(which includes the dead zone):
+
+1. **Line ~1053** — Dead zone early-exit: correctly checks for open trades. If open
+   trades exist in local history, it logs "management mode only" and falls through.
+   If no open trades, returns `None` immediately. ✅ Correct intent.
+
+2. **Line ~1112** — Session-only check: when `session is None`, returns `None`
+   **unconditionally** — even when line 1053 already decided to fall through for
+   management. ❌ This is the bug.
+
+The reconcile, `backfill_pnl`, and `force_close_stale_trades` calls are all below
+line 1112, so they **never ran** during the dead zone — regardless of whether open
+trades needed managing.
+
+**Impact in production (v2.5–v2.7, May 5 2026):**
+- Trade #916 (SELL, opened 02:27 SGT) should have been force-closed by the session-end
+  logic at 04:00 SGT when the US Cont. session ended. The dead zone management bypass
+  meant force_close_stale_trades never ran 04:00–07:59 SGT.
+- When trade #916's SL was hit at 05:05 SGT (dead zone), `backfill_pnl` and
+  `reconcile_runtime_state` also never ran — so the SL closure was not detected until
+  08:00 SGT (first Tokyo cycle), 55 minutes later.
+- The daily report at 07:50 SGT (inside dead zone) correctly showed "Open now: 1
+  position(s)" because the dead zone management bypass prevented the SL detection from
+  being persisted.
+
+**Additional fix — `realized_pnl_usd` falsy check (`bot.py`):**
+Two dead zone open-trade checks used `not t.get("realized_pnl_usd")` (falsy),
+which treats `0.0` (break-even / not-found fallback) the same as `None` (truly open).
+A trade marked closed at `$0` would appear as still open to both dead zone checks,
+causing management mode to loop every 3 minutes indefinitely with no harm but wasted
+API calls. Both occurrences changed to `t.get("realized_pnl_usd") is None` —
+consistent with how `force_close_stale_trades` and `backfill_pnl` already check it.
+
+**Fix:**
+- In the `session is None` block (session-only check), added a `_dz_open` check: if
+  dead zone AND local history has open trades, do NOT return `None` — fall through to
+  the management code (OANDA login → reconcile → backfill → force-close).
+- Added a dead zone exit guard immediately before `_guard_phase`'s final `return` dict.
+  When in dead zone management mode, this guard returns `None` after management is
+  complete, preventing `_signal_phase` and `_execution_phase` from running (no new
+  trade entries during dead zone).
+
+---
+
+## v2.7.0 — 2026-05-05 — Fix reconcile datetime format + force-close infinite retry loop
+
+### Bug fix 1 — `get_today_closed_transactions` nanosecond datetime format (`oanda_trader.py`)
+
+The OANDA v20 transactions API expects RFC 3339 datetimes with **microsecond** precision
+(`2026-05-04T16:00:00.000000Z`). The time-window parameters were formatted with
+**nanosecond** precision (`2026-05-04T16:00:00.000000000Z` — 9 decimal places).
+
+OANDA silently returned an empty transaction list rather than erroring, causing
+`startup_oanda_reconcile()` to log "no closing transactions found" and leave the local
+trade history stale — even when SL/TP closures had occurred while the bot was running.
+
+**Fix:** Changed both `from_utc` and `to_utc` strftime format strings in
+`get_today_closed_transactions()` from `.000000000Z` to `.000000Z`.
+
+### Bug fix 2 — `force_close_stale_trades` infinite retry on already-closed trades (`bot.py`)
+
+When `close_trade()` returned `False` (e.g. HTTP 404 `TRADE_DOESNT_EXIST` because a
+trade had already been closed by SL/TP), the bot logged "will retry next cycle" and
+did exactly that — every 3 minutes, indefinitely. This generated a flood of
+`MARKET_ORDER_REJECT` entries on OANDA (#928–935 visible in the transaction CSV) and
+persisted across restarts because the local history was never updated.
+
+**Fix:** After a failed `close_trade()` call, the bot now calls `get_trade_pnl()` to
+check the broker's view of the trade:
+
+- **Trade is CLOSED on broker** (SL/TP/manual close detected): backfills the real P&L,
+  marks the local record as `BROKER_CLOSED`, fires a Telegram info alert, and stops
+  retrying.
+- **Trade not found on broker at all**: marks it closed with $0 P&L and logs a warning,
+  preventing the infinite retry loop regardless.
+
+**Impact in production (v2.6, May 5 2026):** Trades #916 and #923 both hit SL while
+the force-close mechanism was broken (v2.5 bug). After the v2.6 deploy, the bot
+correctly called `close_trade()` but received 404s and kept retrying, producing 8
+`MARKET_ORDER_REJECT` entries on OANDA between 17:23–17:29 SGT.
+
+---
+
 ## v2.6.0 — 2026-05-05 — Fix force_close_stale_trades (missing close_trade method)
 
 ### Bug fix — `OandaTrader.close_trade()` missing (`oanda_trader.py`)

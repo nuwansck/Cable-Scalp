@@ -1,2 +1,2 @@
-VERSION     = "2.6.0"
-DESCRIPTION = "Cable Scalp v2.6 — fix force_close_stale_trades (missing close_trade method)"
+VERSION     = "2.8.0"
+DESCRIPTION = "Cable Scalp v2.8 — fix dead zone management bypass (open trades not managed 04:00-07:59 SGT)"

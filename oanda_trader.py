@@ -352,8 +352,8 @@ class OandaTrader:
             log.warning("get_today_closed_transactions: bad date %s: %s", today_sgt, exc)
             return []
         day_end  = day_start + timedelta(days=1)
-        from_utc = day_start.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%S.000000000Z")
-        to_utc   = day_end.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%S.000000000Z")
+        from_utc = day_start.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%S.000000Z")
+        to_utc   = day_end.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%S.000000Z")
 
         try:
             r = self._request(

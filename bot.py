@@ -866,8 +866,49 @@ def force_close_stale_trades(history: list, trader, alert, settings: dict,
                     except Exception:
                         pass
                 else:
-                    log.warning("[%s] Force close of trade %s failed — will retry next cycle",
-                                instrument, trade_id)
+                    # close_trade failed — check if the trade is already closed on
+                    # the broker side (e.g. hit SL/TP while force-close was broken).
+                    # If so, backfill the P&L and mark it done so we stop retrying.
+                    pnl = trader.get_trade_pnl(str(trade_id))
+                    if pnl is not None:
+                        # Broker confirms trade is CLOSED — record it and move on
+                        trade["realized_pnl_usd"] = pnl
+                        trade["closed_at_sgt"]    = now_sgt.strftime("%Y-%m-%d %H:%M:%S")
+                        trade["close_reason"]     = "BROKER_CLOSED"
+                        trade["force_close_reason"] = (
+                            f"Already closed by broker (SL/TP/manual) — "
+                            f"detected during force-close attempt: {reason}"
+                        )
+                        changed = True
+                        log.info(
+                            "[%s] Trade %s already closed by broker | pnl=$%.2f | "
+                            "local state updated — no further retries",
+                            instrument, trade_id, pnl,
+                        )
+                        try:
+                            max_p = trade.get("max_pips_reached", 0) or 0
+                            alert.send(
+                                f"ℹ️ Trade Already Closed — {instrument.replace('_','/')}\n"
+                                f"Trade {trade_id} | {trade.get('direction','')}\n"
+                                f"Closed by broker (SL/TP/manual)\n"
+                                f"P&L: ${pnl:.2f} | Max pips reached: {max_p:.1f}p"
+                            )
+                        except Exception:
+                            pass
+                    else:
+                        # Broker also can't find it — treat as gone, mark closed with $0
+                        trade["realized_pnl_usd"] = 0.0
+                        trade["closed_at_sgt"]    = now_sgt.strftime("%Y-%m-%d %H:%M:%S")
+                        trade["close_reason"]     = "BROKER_CLOSED"
+                        trade["force_close_reason"] = (
+                            f"Trade not found on broker — marked closed with $0 P&L: {reason}"
+                        )
+                        changed = True
+                        log.warning(
+                            "[%s] Trade %s not found on broker — marked closed ($0 P&L) "
+                            "to prevent infinite retry",
+                            instrument, trade_id,
+                        )
         except Exception as exc:
             log.warning("force_close_stale_trades error: %s", exc)
 
@@ -1011,7 +1052,7 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
     # reconcile + PnL management.
     if is_dead_zone_time(now_sgt, settings):
         _open_in_history = [t for t in history
-                            if not t.get("realized_pnl_usd") and t.get("status") != "FAILED"]
+                            if t.get("realized_pnl_usd") is None and t.get("status") != "FAILED"]
         if not _open_in_history:
             log.debug("[%s] Dead zone + no open trades — skipping cycle.",
                       instrument, extra={"run_id": run_id})
@@ -1068,24 +1109,37 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
 
     if settings.get("session_only", True):
         if session is None:
-            if is_dead_zone_time(now_sgt, settings):
-                log_event("DEAD_ZONE_SKIP",
-                          f"[{instrument.replace('_', '/')}] Dead zone — management active.",
-                          run_id=run_id)
+            # v2.8 fix: if we are in the dead zone AND local history has open trades
+            # needing management (reconcile / backfill / force-close), do NOT exit
+            # here — fall through so the management block below can run.
+            # A second guard after force_close_stale_trades prevents new trade entry.
+            _dz_open = is_dead_zone_time(now_sgt, settings) and any(
+                t.get("realized_pnl_usd") is None and t.get("status") != "FAILED"
+                for t in history
+            )
+            if _dz_open:
+                log.info("[%s] Dead zone — open trade(s) detected, entering management-only mode.",
+                         instrument, extra={"run_id": run_id})
+                # Fall through to OANDA login -> reconcile -> backfill -> force_close
             else:
-                log.info("[%s] Outside all sessions.", instrument,
-                         extra={"run_id": run_id})
-            if ops.get("last_session") is not None:
-                send_once_per_state(alert, ops, "ops_state", "outside_session",
-                                    f"⏸️ [{instrument.replace(chr(95),chr(47))}] Outside session.", instrument)
-                ops["last_session"] = None
-                save_ops_state(ops, instrument)
-            update_runtime_state(last_cycle_finished=now_sgt.strftime("%Y-%m-%d %H:%M:%S"),
-                                 status="SKIPPED_OUTSIDE_SESSION")
-            db.finish_cycle(run_id, status="SKIPPED",
-                            summary={"stage": "session_check",
-                                     "reason": "outside_session"})
-            return None
+                if is_dead_zone_time(now_sgt, settings):
+                    log_event("DEAD_ZONE_SKIP",
+                              f"[{instrument.replace('_', '/')}] Dead zone — no open trades.",
+                              run_id=run_id)
+                else:
+                    log.info("[%s] Outside all sessions.", instrument,
+                             extra={"run_id": run_id})
+                if ops.get("last_session") is not None:
+                    send_once_per_state(alert, ops, "ops_state", "outside_session",
+                                        f"⏸️ [{instrument.replace(chr(95),chr(47))}] Outside session.", instrument)
+                    ops["last_session"] = None
+                    save_ops_state(ops, instrument)
+                update_runtime_state(last_cycle_finished=now_sgt.strftime("%Y-%m-%d %H:%M:%S"),
+                                     status="SKIPPED_OUTSIDE_SESSION")
+                db.finish_cycle(run_id, status="SKIPPED",
+                                summary={"stage": "session_check",
+                                         "reason": "outside_session"})
+                return None
     else:
         if session is None:
             session, macro = "All Hours", "London"
@@ -1353,6 +1407,18 @@ def _guard_phase(db, run_id, settings, alert, history, now_sgt, today, demo,
                             summary={"stage": "global_trade_cap", "instrument": instrument,
                                      "total_open": total_open, "cap": max_total})
             return None
+
+    # ── Dead zone management complete — no new entries ─────────────────────────
+    # If we fell through the session check in dead-zone management mode, all
+    # reconcile / backfill / force-close work is done.  Return None here to
+    # prevent _signal_phase and _execution_phase from running.
+    if is_dead_zone_time(now_sgt, settings):
+        update_runtime_state(last_cycle_finished=now_sgt.strftime("%Y-%m-%d %H:%M:%S"),
+                             status="SKIPPED_DEAD_ZONE_MGMT_COMPLETE")
+        db.finish_cycle(run_id, status="SKIPPED",
+                        summary={"stage": "dead_zone_mgmt_complete",
+                                 "instrument": instrument})
+        return None
 
     return {
         "trader": trader,
