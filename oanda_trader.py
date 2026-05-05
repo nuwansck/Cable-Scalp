@@ -180,10 +180,19 @@ class OandaTrader:
         return len(self.get_open_trades(instrument))
 
     def get_recent_closed_trades(self, instrument: str | None = None, count: int = 20) -> list:
+        """Return recently closed trades for the given instrument.
+
+        v2.12 change: queries state=ALL instead of state=CLOSED.
+
+        Root cause discovered via v2.11 diagnostics: OANDA's demo API does not return
+        trades #916 and #923 under state=CLOSED even though their stop-loss orders
+        executed correctly. The repeated MARKET_ORDER_REJECT close attempts (from the
+        v2.5 close_trade bug) appear to have left those trades in a non-standard state
+        in OANDA's system. Querying state=ALL returns all trades regardless of state
+        and we filter to CLOSED + matching instrument in Python.
+        """
         try:
-            params: dict = {"state": "CLOSED", "count": count}
-            # Pass instrument as URL param so OANDA filters server-side,
-            # avoiding count truncation when multiple instruments are traded.
+            params: dict = {"state": "ALL", "count": count}
             if instrument:
                 params["instrument"] = instrument
             r = self._request(
@@ -194,33 +203,27 @@ class OandaTrader:
             )
             if r.status_code == 200:
                 raw = r.json()
-                trades = raw.get("trades", [])
+                all_trades = raw.get("trades", [])
                 log.debug(
                     "get_recent_closed_trades raw: HTTP 200 | instrument=%s | "
                     "total_returned=%d | lastTransactionID=%s",
-                    instrument, len(trades), raw.get("lastTransactionID", "?"),
+                    instrument, len(all_trades), raw.get("lastTransactionID", "?"),
                 )
-                if trades:
-                    sample = trades[0]
+                # Filter: instrument match (accept both GBP_USD and GBP/USD formats)
+                # and state is CLOSED (exclude OPEN and CLOSE_WHEN_TRADEABLE)
+                trades = [
+                    t for t in all_trades
+                    if (not instrument or t.get("instrument") in (
+                            instrument, instrument.replace("_", "/")))
+                    and t.get("state") == "CLOSED"
+                ]
+                if all_trades and not trades:
                     log.debug(
-                        "get_recent_closed_trades sample[0]: id=%s instrument=%s "
-                        "state=%s closeTime=%s realizedPL=%s",
-                        sample.get("id"), sample.get("instrument"),
-                        sample.get("state"), sample.get("closeTime"),
-                        sample.get("realizedPL"),
+                        "get_recent_closed_trades: %d total trades returned but 0 matched "
+                        "instrument=%s state=CLOSED; states seen: %s",
+                        len(all_trades), instrument,
+                        list({t.get("state") for t in all_trades}),
                     )
-                # Also apply Python-side filter as fallback in case URL param is ignored
-                if instrument:
-                    all_count = len(trades)
-                    trades = [
-                        t for t in trades
-                        if t.get("instrument") in (instrument, instrument.replace("_", "/"))
-                    ]
-                    if len(trades) != all_count:
-                        log.debug(
-                            "get_recent_closed_trades instrument filter: %d → %d trades",
-                            all_count, len(trades),
-                        )
                 return trades
             log.warning("get_recent_closed_trades failed: %s %s", r.status_code, r.text[:200])
             return []

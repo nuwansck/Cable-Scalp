@@ -1,5 +1,40 @@
 # Cable Scalp — Changelog
 
+## v2.12.0 — 2026-05-05 — Fix get_recent_closed_trades state=ALL (OANDA state anomaly)
+
+### Root cause confirmed via v2.11 diagnostics
+
+The v2.11 startup log revealed exactly what OANDA is returning:
+
+```
+returned 50 trade(s) for GBP_USD
+sample[0]: id=907  closeTime=2026-04-30  realizedPL=67.0019
+sample[1]: id=899  closeTime=2026-04-29  realizedPL=68.7229
+sample[2]: id=893  closeTime=2026-04-29  realizedPL=66.6400
+```
+
+OANDA returned 50 GBP_USD closed trades sorted newest-first by ID, but the newest
+trade returned was id=907 (April 30). Trades #916 and #923 (May 5, IDs 916 and 923
+which are higher than 907) were completely absent from the `state=CLOSED` result set.
+
+**Diagnosis:** OANDA's API does not consider trades #916 and #923 as having
+`state=CLOSED`. The most likely cause is the 16 MARKET_ORDER_REJECT transactions
+generated while the `close_trade` bug was active (v2.5–v2.7). These repeated failed
+close attempts appear to have put those trades into a non-standard or inconsistent
+state in OANDA's system that is not indexed under `state=CLOSED`, even though the
+stop-loss order fills (transactions #920 and #926) correctly closed them.
+
+**Fix:** Changed `get_recent_closed_trades` to query `state=ALL` (returns trades in
+any state) and filter for `state=CLOSED` in Python after receiving the response. This
+bypasses whatever state indexing issue OANDA has with these specific trades, while
+still only processing genuinely closed trades. The count is kept at the caller's
+requested value; the instrument filter accepts both `GBP_USD` and `GBP/USD` formats.
+
+A debug log is emitted if trades are returned but none match after filtering, which
+will surface any future state anomalies without failing silently.
+
+---
+
 ## v2.11.0 — 2026-05-05 — Reconcile diagnostic logging + get_recent_closed_trades URL param fix
 
 ### Context
