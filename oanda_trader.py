@@ -378,6 +378,32 @@ class OandaTrader:
             log.error("get_today_closed_transactions error: %s", exc)
             return []
 
+    def close_trade(self, trade_id: str) -> bool:
+        """Close a specific open trade by its OANDA trade ID.
+
+        Used by force_close_stale_trades() in bot.py to close individual
+        trades by ID rather than closing the entire instrument position.
+
+        Added in v2.6 — this method was missing in v2.5, causing
+        force_close_stale_trades() to throw AttributeError every 3 minutes
+        whenever a stale trade needed force-closing.
+        """
+        try:
+            r = self._request(
+                "PUT",
+                f"/v3/accounts/{self.account_id}/trades/{trade_id}/close",
+                timeout=15,
+            )
+            if r.status_code == 200:
+                log.info("close_trade: trade %s closed successfully", trade_id)
+                return True
+            err = r.text[:300] if r.text else f"HTTP {r.status_code}"
+            log.error("close_trade failed: HTTP %s — %s", r.status_code, err)
+            return False
+        except Exception as e:
+            log.error("close_trade error: %s", e)
+            return False
+
     def close_position(self, instrument):
         try:
             r = self._request(

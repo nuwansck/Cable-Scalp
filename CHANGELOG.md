@@ -1,5 +1,34 @@
 # Cable Scalp — Changelog
 
+## v2.6.0 — 2026-05-05 — Fix force_close_stale_trades (missing close_trade method)
+
+### Bug fix — `OandaTrader.close_trade()` missing (`oanda_trader.py`)
+
+`force_close_stale_trades()` in `bot.py` calls `trader.close_trade(trade_id)` to
+force-close individual stale trades by their OANDA trade ID. This method did not
+exist in `OandaTrader` — only `close_position(instrument)` was implemented — causing
+an `AttributeError` to be raised and caught silently every 3 minutes from the moment
+any trade became eligible for force-closure.
+
+**Impact in production (v2.5, May 4–5 2026):**
+- Trade #916 (US Cont. SELL, opened 02:27 SGT May 5) was not closed at the US Cont.
+  session end (04:00 SGT) as intended, and continued to run unmanaged.
+- Trade #923 (Tokyo SELL 6/6, opened 08:30 SGT May 5) was subsequently opened on top
+  of #916, resulting in two concurrent SELL positions despite the max-concurrent-trades
+  limit of 1. The duplicate was not detected because the force-close error masked the
+  open-trade state.
+- The error fired 280+ times across the two affected log files, escalating to
+  twice per cycle once both trades were active (one error per stale trade).
+
+**Fix:** Added `OandaTrader.close_trade(trade_id: str) -> bool` in `oanda_trader.py`.
+The method calls `PUT /v3/accounts/{account_id}/trades/{trade_id}/close` and returns
+`True` on HTTP 200, `False` otherwise — matching the return-value contract that
+`force_close_stale_trades()` already expected.
+
+No changes to `bot.py` or any other file were required.
+
+---
+
 ## v2.5.0 — 2026-05-04 — Schedule refinement, weekly CSV export, import fix
 
 ### Bug fix — `_clean_session` not imported in `bot.py`
