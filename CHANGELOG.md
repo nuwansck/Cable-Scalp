@@ -1,5 +1,40 @@
 # Cable Scalp — Changelog
 
+## v2.13.0 — 2026-05-05 — Fix startup reconcile: follow OANDA /transactions pagination pages
+
+### Root cause confirmed: /trades endpoint blind spot is permanent for these trades
+
+v2.12 diagnostic confirmed that even `state=ALL` returns only trades up to id=907
+(April 30). Trades #916 and #923 are permanently invisible to the OANDA `/trades`
+endpoint regardless of state filter. This appears to be a permanent demo-account
+artifact caused by the 16 MARKET_ORDER_REJECT close attempts.
+
+### Fix: `get_today_closed_transactions` now follows pagination pages (`oanda_trader.py`)
+
+The OANDA `/transactions?from=...&to=...&type=ORDER_FILL` endpoint returns a
+pagination envelope: `{"count": N, "pages": ["https://.../idrange?from=X&to=Y"]}`.
+The method previously read `r.json().get("transactions", [])` which always returned
+`[]` (pagination envelope has no `"transactions"` key at the root level).
+
+**Fix:** The method now:
+1. Parses the envelope and extracts the `pages` list
+2. Fetches each page URL via `_request("GET", page_url)` to get actual transactions
+3. Collects all transactions across all pages
+4. Filters to closing ORDER_FILLs (`tradesClosed` present) for the target instrument
+5. Logs the count at INFO level (page count, total txns, closing fills found)
+
+If `pages` is empty, it means no transactions matched the time window — genuinely
+empty, not a parsing failure. The `to_utc` is still capped at `now + 5 minutes`
+(from v2.9) to avoid querying future time windows.
+
+### `startup_oanda_reconcile` switched back to `get_today_closed_transactions` (`reconcile_state.py`)
+
+The `/transactions` endpoint is OANDA's definitive audit trail and records SL/TP
+closures regardless of the `/trades` endpoint state. Now that the pagination is fixed,
+this is the most reliable data source for startup reconciliation.
+
+---
+
 ## v2.12.0 — 2026-05-05 — Fix get_recent_closed_trades state=ALL (OANDA state anomaly)
 
 ### Root cause confirmed via v2.11 diagnostics

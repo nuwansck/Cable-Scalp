@@ -172,53 +172,19 @@ def startup_oanda_reconcile(
 
     summary = {"injected": [], "backfilled": [], "skipped": 0, "errors": []}
 
-    # Fetch recently closed trades for this instrument (proven endpoint)
+    # Use get_today_closed_transactions — the /transactions endpoint is OANDA's definitive
+    # audit trail and is unaffected by the /trades endpoint state anomalies we encountered
+    # in v2.10-v2.12 where trades #916 and #923 were invisible to /trades?state=CLOSED|ALL.
     try:
-        closed_trades = trader.get_recent_closed_trades(instrument, count=50)
+        closing_txns = trader.get_today_closed_transactions(instrument, today_sgt)
     except Exception as exc:
-        msg = f"startup_oanda_reconcile: could not fetch closed trades: {exc}"
+        msg = f"startup_oanda_reconcile: could not fetch transactions: {exc}"
         log.warning(msg)
         summary["errors"].append(msg)
         return summary
 
-    log.info(
-        "startup_oanda_reconcile: get_recent_closed_trades returned %d trade(s) for %s",
-        len(closed_trades), instrument,
-    )
-    if closed_trades:
-        for _t in closed_trades[:3]:
-            log.info(
-                "startup_oanda_reconcile sample trade: id=%s instrument=%s state=%s "
-                "closeTime=%s realizedPL=%s",
-                _t.get("id"), _t.get("instrument"), _t.get("state"),
-                _t.get("closeTime"), _t.get("realizedPL"),
-            )
-
-    # Filter to only trades that closed today (SGT date)
-    today_closed = []
-    for trade in closed_trades:
-        close_time_raw = trade.get("closeTime", "")
-        if not close_time_raw:
-            log.debug("startup_oanda_reconcile: trade %s has no closeTime — skipping",
-                      trade.get("id"))
-            continue
-        try:
-            dt_utc = datetime.strptime(close_time_raw[:19], "%Y-%m-%dT%H:%M:%S")
-            dt_sgt = pytz.utc.localize(dt_utc).astimezone(SGT)
-            trade_date = dt_sgt.strftime("%Y-%m-%d")
-            if trade_date != today_sgt:
-                log.debug("startup_oanda_reconcile: trade %s closed on %s, not today (%s) — skipping",
-                          trade.get("id"), trade_date, today_sgt)
-                continue
-            trade["_close_time_sgt"] = dt_sgt.strftime("%Y-%m-%d %H:%M:%S")
-        except Exception as _te:
-            log.debug("startup_oanda_reconcile: could not parse closeTime '%s' for trade %s: %s",
-                      close_time_raw, trade.get("id"), _te)
-            continue
-        today_closed.append(trade)
-
-    if not today_closed:
-        log.info("startup_oanda_reconcile: no closing trades found for %s on %s",
+    if not closing_txns:
+        log.info("startup_oanda_reconcile: no closing transactions found for %s on %s",
                  instrument, today_sgt)
         return summary
 
@@ -228,73 +194,87 @@ def startup_oanda_reconcile(
         if tid:
             history_by_trade_id[tid] = item
 
-    for trade in today_closed:
-        trade_id = str(trade.get("id", "")).strip()
-        if not trade_id:
+    for txn in closing_txns:
+        trades_closed = txn.get("tradesClosed", [])
+        if not trades_closed:
             continue
 
-        raw_pnl = trade.get("realizedPL")
-        try:
-            pnl = float(raw_pnl) if raw_pnl is not None else None
-        except (TypeError, ValueError):
-            pnl = None
+        for tc in trades_closed:
+            trade_id = str(tc.get("tradeID", "")).strip()
+            if not trade_id:
+                continue
 
-        close_time_str = trade.get("_close_time_sgt", "")
+            raw_pnl = tc.get("realizedPL")
+            try:
+                pnl = float(raw_pnl) if raw_pnl is not None else None
+            except (TypeError, ValueError):
+                pnl = None
 
-        if trade_id in history_by_trade_id:
-            existing = history_by_trade_id[trade_id]
-            if existing.get("realized_pnl_usd") is None and pnl is not None:
-                existing["realized_pnl_usd"] = pnl
-                if close_time_str:
-                    existing.setdefault("closed_at_sgt", close_time_str)
-                summary["backfilled"].append(trade_id)
-                log.info("startup_oanda_reconcile: backfilled pnl=%.2f for trade %s",
-                         pnl, trade_id)
-            else:
-                summary["skipped"] += 1
-            continue
+            close_time_str = ""
+            txn_time = txn.get("time", "")
+            if txn_time:
+                try:
+                    dt_utc = datetime.strptime(txn_time[:19], "%Y-%m-%dT%H:%M:%S")
+                    dt_sgt = pytz.utc.localize(dt_utc).astimezone(SGT)
+                    close_time_str = dt_sgt.strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    close_time_str = ""
 
-        # Trade closed today but not in local history — inject it
-        initial_units = _safe_float(trade.get("initialUnits", 0))
-        direction = "SELL" if initial_units < 0 else "BUY"
+            if trade_id in history_by_trade_id:
+                existing = history_by_trade_id[trade_id]
+                if existing.get("realized_pnl_usd") is None and pnl is not None:
+                    existing["realized_pnl_usd"] = pnl
+                    if close_time_str:
+                        existing.setdefault("closed_at_sgt", close_time_str)
+                    summary["backfilled"].append(trade_id)
+                    log.info(
+                        "startup_oanda_reconcile: backfilled pnl=%.2f for trade %s",
+                        pnl, trade_id,
+                    )
+                else:
+                    summary["skipped"] += 1
+                continue
 
-        record = {
-            "timestamp_sgt":        trade.get("_close_time_sgt",
-                                              now_sgt.strftime("%Y-%m-%d %H:%M:%S")),
-            "closed_at_sgt":        close_time_str,
-            "mode":                 "BROKER_RECONCILED",
-            "instrument":           instrument,
-            "direction":            direction,
-            "setup":                "broker_reconciled_startup",
-            "session":              "Reconciled",
-            "macro_session":        "Reconciled",
-            "score":                None,
-            "threshold":            None,
-            "entry":                _safe_float(trade.get("price")),
-            "sl_price":             None,
-            "tp_price":             None,
-            "size":                 abs(initial_units),
-            "cpr_width_pct":        None,
-            "estimated_risk_usd":   None,
-            "estimated_reward_usd": None,
-            "spread_pips":          None,
-            "stop_pips":            None,
-            "tp_pips":              None,
-            "levels":               {"source": "startup_oanda_reconcile"},
-            "details":              "Injected by startup_oanda_reconcile — missing from history.json after redeploy.",
-            "trade_id":             trade_id,
-            "status":               "FILLED",
-            "realized_pnl_usd":     pnl,
-            "breakeven_moved":      False,
-            "closed_alert_sent":    True,
-        }
-        history.append(record)
-        history_by_trade_id[trade_id] = record
-        summary["injected"].append(trade_id)
-        log.warning(
-            "startup_oanda_reconcile: injected missing closed trade %s pnl=%.2f direction=%s",
-            trade_id, pnl or 0, direction,
-        )
+            # Closing transaction for a trade not in local history — inject it
+            closing_units = _safe_float(txn.get("units", 0))
+            direction = "SELL" if closing_units > 0 else "BUY"
+
+            record = {
+                "timestamp_sgt":        close_time_str or now_sgt.strftime("%Y-%m-%d %H:%M:%S"),
+                "closed_at_sgt":        close_time_str,
+                "mode":                 "BROKER_RECONCILED",
+                "instrument":           instrument,
+                "direction":            direction,
+                "setup":                "broker_reconciled_startup",
+                "session":              "Reconciled",
+                "macro_session":        "Reconciled",
+                "score":                None,
+                "threshold":            None,
+                "entry":                None,
+                "sl_price":             None,
+                "tp_price":             None,
+                "size":                 abs(_safe_float(tc.get("units", closing_units))),
+                "cpr_width_pct":        None,
+                "estimated_risk_usd":   None,
+                "estimated_reward_usd": None,
+                "spread_pips":          None,
+                "stop_pips":            None,
+                "tp_pips":              None,
+                "levels":               {"source": "startup_oanda_reconcile"},
+                "details":              "Injected by startup_oanda_reconcile — missing from history.json after redeploy.",
+                "trade_id":             trade_id,
+                "status":               "FILLED",
+                "realized_pnl_usd":     pnl,
+                "breakeven_moved":      False,
+                "closed_alert_sent":    True,
+            }
+            history.append(record)
+            history_by_trade_id[trade_id] = record
+            summary["injected"].append(trade_id)
+            log.warning(
+                "startup_oanda_reconcile: injected missing closed trade %s pnl=%.2f direction=%s",
+                trade_id, pnl or 0, direction,
+            )
 
     log.info(
         "startup_oanda_reconcile complete: injected=%d backfilled=%d skipped=%d",

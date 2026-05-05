@@ -369,16 +369,16 @@ class OandaTrader:
     def get_today_closed_transactions(self, instrument: str, today_sgt: str) -> list:
         """Fetch all closing ORDER_FILL transactions for today (SGT date YYYY-MM-DD).
 
-        *** KNOWN ISSUE (v2.10) ***
-        OANDA's GET /transactions?from=...&to=...&type=ORDER_FILL endpoint returns a
-        PAGINATION ENVELOPE: {"count": N, "pages": [...], "lastTransactionID": "..."}
-        The transactions are NOT in the root response — they are behind the page URLs.
-        This method reads r.json().get("transactions", []) which always returns [] for
-        this response format, making the method non-functional.
+        Fixed in v2.13: OANDA's GET /transactions?from=...&to=...&type=ORDER_FILL
+        returns a PAGINATION ENVELOPE:
+            {"count": N, "pages": ["https://...transactions/idrange?from=X&to=Y"]}
+        The actual transactions are behind the page URLs.  This method now follows
+        each page URL and collects all ORDER_FILL transactions, then filters to
+        closing fills (tradesClosed present) for the given instrument.
 
-        startup_oanda_reconcile() has been updated in v2.10 to use
-        get_recent_closed_trades() instead. This method is retained for potential
-        future use (e.g. after implementing page-following logic).
+        This is the most reliable way to find SL/TP closures because the
+        /transactions endpoint is the definitive audit trail — it records every
+        event regardless of the /trades endpoint state quirks seen in v2.5–v2.12.
         """
         import pytz
         from datetime import datetime, timedelta
@@ -399,24 +399,70 @@ class OandaTrader:
         to_utc   = safe_end.strftime("%Y-%m-%dT%H:%M:%S.000000Z")
 
         try:
+            # Step 1: fetch the pagination envelope
             r = self._request(
                 "GET",
                 f"/v3/accounts/{self.account_id}/transactions",
                 params={"from": from_utc, "to": to_utc, "type": "ORDER_FILL"},
                 timeout=20,
             )
-            if r.status_code == 200:
-                txns = r.json().get("transactions", [])
-                closing = [
-                    t for t in txns
-                    if t.get("instrument") == instrument and t.get("tradesClosed")
-                ]
-                return closing
-            log.warning(
-                "get_today_closed_transactions HTTP %s: %s",
-                r.status_code, r.text[:200],
+            if r.status_code != 200:
+                log.warning(
+                    "get_today_closed_transactions HTTP %s: %s",
+                    r.status_code, r.text[:200],
+                )
+                return []
+
+            envelope = r.json()
+            pages = envelope.get("pages", [])
+            txn_count = envelope.get("count", 0)
+            log.debug(
+                "get_today_closed_transactions envelope: count=%s pages=%d",
+                txn_count, len(pages),
             )
-            return []
+
+            if not pages:
+                # No pages means no transactions in the window — genuinely empty
+                log.info(
+                    "get_today_closed_transactions: 0 ORDER_FILL pages for %s on %s",
+                    instrument, today_sgt,
+                )
+                return []
+
+            # Step 2: follow each page URL and collect transactions
+            all_txns = []
+            for page_url in pages:
+                try:
+                    pr = self._request("GET", page_url, timeout=20)
+                    if pr.status_code == 200:
+                        page_txns = pr.json().get("transactions", [])
+                        all_txns.extend(page_txns)
+                        log.debug(
+                            "get_today_closed_transactions page %s: %d txns",
+                            page_url, len(page_txns),
+                        )
+                    else:
+                        log.warning(
+                            "get_today_closed_transactions page fetch HTTP %s: %s",
+                            pr.status_code, pr.text[:200],
+                        )
+                except Exception as page_exc:
+                    log.warning(
+                        "get_today_closed_transactions page fetch error: %s", page_exc,
+                    )
+
+            # Step 3: filter to closing fills for the target instrument
+            closing = [
+                t for t in all_txns
+                if t.get("instrument") in (instrument, instrument.replace("_", "/"))
+                and t.get("tradesClosed")
+            ]
+            log.info(
+                "get_today_closed_transactions: %d total txns → %d closing fills for %s on %s",
+                len(all_txns), len(closing), instrument, today_sgt,
+            )
+            return closing
+
         except Exception as exc:
             log.error("get_today_closed_transactions error: %s", exc)
             return []
